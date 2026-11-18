@@ -21,7 +21,8 @@ export async function rpc(fn, args = {}) {
   if (!online) throw new Error('offline');
   const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${fn}`, {
     method: 'POST',
-    headers: { apikey: SUPABASE_ANON_KEY, Authorization: `Bearer ${SUPABASE_ANON_KEY}`, 'Content-Type': 'application/json' },
+    // new "sb_publishable_" keys go only in the apikey header; old JWT anon keys also as Bearer
+    headers: { apikey: SUPABASE_ANON_KEY, 'Content-Type': 'application/json', ...(SUPABASE_ANON_KEY.startsWith('sb_') ? {} : { Authorization: `Bearer ${SUPABASE_ANON_KEY}` }) },
     body: JSON.stringify(args),
   });
   const text = await res.text();
