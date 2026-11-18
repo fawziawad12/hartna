@@ -1,11 +1,9 @@
 import * as THREE from 'three';
 import { makeLabel } from './labels.js';
 import { mulberry32, hashString, pick } from './rng.js';
-import { currentTier } from './economy.js';
+import { outfitOf } from './economy.js';
 
 const SKIN = ['#f1c9a5', '#e0ac85', '#c68b5e', '#a8714a', '#8d5a3b'];
-const CLOTH = ['#f4f1ea', '#e9e2d0', '#3b4a6b', '#6b3b3b', '#2f5d50', '#8a6d4b', '#4a4a4a', '#7b5ea7', '#b5523b', '#d9c7a0', '#1f2f3f'];
-const HEAD = ['none', 'keffiyeh', 'keffiyehRed', 'hijab', 'cap', 'none'];
 
 const geo = {
   leg: new THREE.BoxGeometry(0.17, 0.8, 0.17).translate(0, -0.4, 0),
@@ -28,13 +26,11 @@ const M = (c) => {
 const phoneScreen = new THREE.MeshBasicMaterial({ color: new THREE.Color(0.6, 1.1, 1.8) });
 const pickMat = new THREE.MeshBasicMaterial({ visible: false });
 
-function buildPerson(rng) {
+function buildPerson(rng, outfit) {
   const g = new THREE.Group();
   const skin = pick(rng, SKIN);
-  const cloth = pick(rng, CLOTH);
-  const pants = pick(rng, ['#2b2b2b', '#3b3227', '#4a3b2a', '#22304a']);
-  const style = pick(rng, HEAD);
-  const robe = style === 'keffiyeh' || style === 'keffiyehRed' || (style === 'hijab' && rng() < 0.7) || rng() < 0.25;
+  const { cloth, pants, robe } = outfit;
+  const style = outfit.head;
   const mesh = (gm, c) => {
     const m = new THREE.Mesh(gm, M(c));
     m.castShadow = true;
@@ -59,7 +55,7 @@ function buildPerson(rng) {
   head.position.y = 1.78;
   g.add(head);
   if (style === 'keffiyeh' || style === 'keffiyehRed') {
-    const k = mesh(geo.hijab, style === 'keffiyehRed' ? '#f3eee6' : '#f7f5ef');
+    const k = mesh(geo.hijab, style === 'keffiyehRed' ? '#f3eee6' : outfit.headColor);
     k.position.y = 1.78;
     k.scale.set(1.02, 1.05, 1.02);
     g.add(k);
@@ -74,16 +70,16 @@ function buildPerson(rng) {
       g.add(dots);
     }
   } else if (style === 'hijab') {
-    const h = mesh(geo.hijab, pick(rng, ['#3b2b4a', '#6b3b3b', '#2f5d50', '#d9c7a0', '#1f2f3f', '#b07a8a']));
+    const h = mesh(geo.hijab, outfit.headColor);
     h.position.y = 1.75;
     h.rotation.x = -0.25;
     g.add(h);
   } else if (style === 'cap') {
-    const c = mesh(geo.cap, pick(rng, ['#f4f1ea', '#2b2b2b', '#b5523b']));
+    const c = mesh(geo.cap, outfit.headColor);
     c.position.y = 1.93;
     g.add(c);
   } else {
-    const h = mesh(geo.hair, pick(rng, ['#1c120c', '#2e1d12', '#4a3020']));
+    const h = mesh(geo.hair, outfit.headColor);
     h.position.y = 1.8;
     g.add(h);
   }
@@ -118,8 +114,7 @@ export class Residents {
 
   add(data) {
     const rng = mulberry32(hashString(data.id + data.username));
-    const body = buildPerson(rng);
-    const tier = currentTier(data);
+    const body = buildPerson(rng, outfitOf(data));
     const label = makeLabel(`@${data.username}`);
     label.position.y = 2.45;
     body.group.add(label);

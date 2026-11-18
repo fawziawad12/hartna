@@ -86,3 +86,4 @@ body.reels #card { right: 50%; transform: translateX(50%); bottom: 140px; }
 .item .tx em { font-style: normal; color: #9be29b; }
 .item .pr { font-weight: 900; color: var(--gold); white-space: nowrap; font-size: 14px; }
 .soon { text-align: center; margin: 14px 0 0; opacity: .8; font-size: 13px; }
+.item .swatch { width: 30px; height: 30px; border-radius: 8px; border: 2px solid var(--line); flex: none; }

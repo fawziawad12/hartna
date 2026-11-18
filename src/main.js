@@ -10,7 +10,7 @@ import { Residents } from './residents.js';
 import { createSky } from './sky.js';
 import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
-import { CURRENCY, SHOP, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
+import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -214,7 +214,7 @@ function showCard(w) {
   cardResident = d;
   updateCardMoney();
   const owns = [];
-  if (d.assets.some((a) => a.type === 'home')) owns.push('🏠 بيت هدية');
+  if (d.assets.some((a) => a.type === 'home')) owns.push('🏠 بيت هدية (مأجّر)');
   for (const a of d.assets) {
     const item = SHOP.find((i) => i.key === a.type);
     if (item) owns.push(`${item.emoji} ${item.ar}`);
@@ -353,7 +353,11 @@ addEventListener('keydown', (e) => {
 $('shop-items').innerHTML = SHOP.map(
   (i) => `<div class="item"><div class="ic">${i.emoji}</div><div class="tx"><b>${i.ar}</b><span>${i.desc}</span>${i.incomePerHour ? `<em>+${fmt(i.incomePerHour)} ${CURRENCY.emoji} بالساعة</em>` : ''}</div><div class="pr">${fmt(i.price)} ${CURRENCY.emoji}</div></div>`,
 ).join('');
-$('shop-earn').innerHTML = EARN_RULES.map((r) => `<div class="rule"><span>${r.emoji} ${r.ar}</span><b>+${fmt(r.amount)} ${CURRENCY.emoji}</b>${r.live ? '' : '<i>قريباً</i>'}</div>`).join('');
+$('shop-earn').innerHTML = EARN_RULES.map((r) => `<div class="rule"><span>${r.emoji} ${r.ar}</span><b>+${fmt(r.amount)} ${CURRENCY.emoji}${r.perHour ? ' بالساعة' : ''}</b>${r.live ? '' : '<i>قريباً</i>'}</div>`).join('');
+$('shop-clothes').innerHTML = OUTFITS.map(
+  (o) => `<div class="item"><div class="ic swatch" style="background:${o.cloth}"></div><div class="tx"><b>${o.ar}</b>${o.price ? '' : '<span>اللبس الموحّد لكل الساكنين</span>'}</div><div class="pr">${o.price ? fmt(o.price) + ' ' + CURRENCY.emoji : 'مجاني'}</div></div>`,
+).join('');
+$('shop-market').innerHTML = MARKET_RULES.map((m) => `<div class="item"><div class="ic">${m.emoji}</div><div class="tx"><b>${m.ar}</b><span>${m.desc}</span></div></div>`).join('') + '<p class="muted">ما في بيوت معروضة هلأ.</p>';
 $('btn-shop').onclick = () => $('shop').classList.toggle('show');
 $('shop-close').onclick = () => $('shop').classList.remove('show');
 

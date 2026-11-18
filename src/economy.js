@@ -27,6 +27,8 @@ export function normalizeResidents(list) {
       joinedAt: raw.joinedAt || null,
       money: raw.money || 0,
       spent: raw.spent || 0,
+      age: raw.age || null,
+      outfit: raw.outfit || 'hartna',
       assets,
     });
   }
@@ -68,9 +70,12 @@ export function ownedPlots(residents) {
 // Everyone earns just by living in the city. Money is computed from the join time,
 // so it keeps growing even when nobody has the page open.
 export const BASE_INCOME_PER_HOUR = 6; // the phone
+// Houses rent themselves out automatically: every house you own pays rent every hour.
+export const HOME_RENT_PER_HOUR = 4;
 
 export const EARN_RULES = [
-  { emoji: '📱', ar: 'كل ساعة إنت ساكن بالحارة', amount: BASE_INCOME_PER_HOUR, live: true },
+  { emoji: '📱', ar: 'كل ساعة إنت ساكن بالحارة', amount: BASE_INCOME_PER_HOUR, live: true, perHour: true },
+  { emoji: '🏠', ar: 'أجار بيتك (بيتأجّر لحاله)', amount: HOME_RENT_PER_HOUR, live: true, perHour: true },
   { emoji: '💬', ar: 'كل تعليق على بوست', amount: 50, live: false },
   { emoji: '📣', ar: 'تعمل منشن للحساب بالستوري', amount: 200, live: false },
 ];
@@ -78,6 +83,7 @@ export const EARN_RULES = [
 export function incomePerHour(resident) {
   let total = BASE_INCOME_PER_HOUR;
   for (const a of resident.assets || []) {
+    if (a.type === 'home') total += HOME_RENT_PER_HOUR;
     const item = SHOP.find((i) => i.key === a.type);
     if (item && item.incomePerHour) total += item.incomePerHour;
   }
@@ -94,12 +100,31 @@ export function moneyNow(resident, now = Date.now()) {
 export const SHOP = [
   { key: 'stall', emoji: '🛒', ar: 'بسطة بالسوق', desc: 'بتبيع عليها وبتجيبلك دخل', price: 500, incomePerHour: 4 },
   { key: 'shop', emoji: '🏪', ar: 'دكان', desc: 'دخل أكبر من البسطة', price: 3000, incomePerHour: 15 },
-  { key: 'rent', emoji: '🔑', ar: 'أجّر بيتك', desc: 'بتأجّر بيتك لناس وبتقبض كل ساعة', price: 1500, incomePerHour: 10 },
   { key: 'floor', emoji: '🧱', ar: 'كبّر بيتك (طابق زيادة)', desc: 'بيتك بيعلى طابق', price: 8000, incomePerHour: 0 },
-  { key: 'house', emoji: '🏠', ar: 'بيت تاني', desc: 'بيت جديد باسمك بالحارة', price: 12000, incomePerHour: 0 },
+  { key: 'house', emoji: '🏠', ar: 'بيت تاني', desc: 'بيت جديد باسمك، وبيتأجّر لحاله', price: 12000, incomePerHour: 4 },
   { key: 'car', emoji: '🚗', ar: 'سيارة', desc: 'سيارة بتمشي بشوارع الحارة', price: 30000, incomePerHour: 0 },
   { key: 'building', emoji: '🏢', ar: 'عمارة', desc: 'عمارة كاملة بشقق للأجار', price: 150000, incomePerHour: 120 },
   { key: 'tower', emoji: '🏙️', ar: 'برج', desc: 'أعلى شي بالحارة', price: 1000000, incomePerHour: 600 },
 ];
 
+
+// The house market: list your house for sale at your own price, or buy a house a friend listed.
+export const MARKET_RULES = [
+  { emoji: '🏷️', ar: 'اعرض بيتك للبيع', desc: 'بتحط السعر اللي بدك ياه، وبيطلع بسوق البيوت' },
+  { emoji: '🤝', ar: 'اشتري بيت صاحبك', desc: 'إذا عارض بيته، بتشتريه وبيصير باسمك' },
+  { emoji: '🔑', ar: 'البيت بيتأجّر لحاله', desc: `كل بيت إلك بيجيبلك ${HOME_RENT_PER_HOUR} 🪙 أجار كل ساعة` },
+];
+
 export const fmt = (n) => Math.floor(n).toLocaleString('en-US');
+
+// ---- Clothes ---------------------------------------------------------------
+// Everyone wears the same Hartna outfit by default; other outfits are sold in the clothes shop.
+export const OUTFITS = [
+  { key: 'hartna', ar: 'لبس حارتنا', emoji: '🟢', price: 0, cloth: '#2f6b5a', pants: '#2a2a2a', robe: false, head: 'hair', headColor: '#1c120c' },
+  { key: 'thobe', ar: 'ثوب وشماغ', emoji: '🤍', price: 800, cloth: '#f4f1ea', pants: '#f4f1ea', robe: true, head: 'keffiyehRed', headColor: '#b8322c' },
+  { key: 'abaya', ar: 'عباية وحجاب', emoji: '🖤', price: 800, cloth: '#1f1f2a', pants: '#1f1f2a', robe: true, head: 'hijab', headColor: '#3b2b4a' },
+  { key: 'jalabiya', ar: 'جلابية مطرّزة', emoji: '🧡', price: 1200, cloth: '#b5523b', pants: '#b5523b', robe: true, head: 'cap', headColor: '#f4f1ea' },
+  { key: 'casual', ar: 'لبس عادي', emoji: '👕', price: 400, cloth: '#3b4a6b', pants: '#22304a', robe: false, head: 'cap', headColor: '#2b2b2b' },
+  { key: 'gold', ar: 'لبس ذهبي', emoji: '✨', price: 20000, cloth: '#d4a94a', pants: '#3a2e25', robe: true, head: 'keffiyeh', headColor: '#d4a94a' },
+];
+export const outfitOf = (resident) => OUTFITS.find((o) => o.key === resident.outfit) || OUTFITS[0];
