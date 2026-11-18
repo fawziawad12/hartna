@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { Batch } from './batch.js';
-import { mulberry32, pick } from './rng.js';
+import { mulberry32, hashString, pick } from './rng.js';
 
 // ---- City layout constants -------------------------------------------------
 export const B = 20; // block size
@@ -71,8 +71,11 @@ export function createMaterials() {
 }
 
 // ---- The builder ------------------------------------------------------------
-export function buildCity(scene, materials, { seed = 7 } = {}) {
-  const rng = mulberry32(seed);
+// owners: [{ username, color }] in join order. Owner k gets the k-th building lot,
+// counted from the square outwards (the earliest residents get the best spots).
+export function buildCity(scene, materials, { seed = 7, owners = [], buildings = 100 } = {}) {
+  const mainRng = mulberry32(seed);
+  let rng = mainRng;
   const batch = new Batch();
   const plots = []; // future ownership: stalls, houses...
   const lights = []; // world positions of lanterns (some get real point lights)
@@ -160,14 +163,21 @@ export function buildCity(scene, materials, { seed = 7 } = {}) {
     return doorX;
   }
 
-  function house(bx, bz, rc, blockId, idx) {
+  function house(bx, bz, rc, id, owner) {
+    // every house has its own random stream, so making one taller never changes the others
+    rng = mulberry32(hashString(id));
     const w = rc.x1 - rc.x0;
     const d = rc.z1 - rc.z0;
     const cx = bx + (rc.x0 + rc.x1) / 2;
     const cz = bz + (rc.z0 + rc.z1) / 2;
-    const floors = 1 + Math.floor(r() * 3);
-    const h = floors * 3.2 + r() * 0.5;
-    const stone = pick(rng, STONE);
+    let floors = 2 + Math.floor(r() * 3);
+    let h = floors * 3.2 + r() * 0.5;
+    let stone = pick(rng, STONE);
+    if (owner) {
+      floors = 5;
+      h = floors * 3.2 + 0.3;
+      stone = '#f3e4c4';
+    }
     box('solid', mat(cx, h / 2, cz, w, h, d), stone);
     box('solid', mat(cx, 0.25, cz, w + 0.06, 0.5, d + 0.06), shade(stone, 0.78));
     box('solid', mat(cx, h - 0.55, cz, w + 0.18, 0.22, d + 0.18), shade(stone, 0.86));
@@ -198,7 +208,34 @@ export function buildCity(scene, materials, { seed = 7 } = {}) {
     if (Math.abs(rc.x1 - B / 2) < 0.01) faces.push({ x: bx + rc.x1, z: cz, yaw: Math.PI / 2, L: d });
     if (Math.abs(rc.x0 + B / 2) < 0.01) faces.push({ x: bx + rc.x0, z: cz, yaw: -Math.PI / 2, L: d });
     faces.forEach((f, i) => facade(frame(f.x, f.z, f.yaw), f.L, floors, stone, { noDoor: i > 0 && r() < 0.5 }));
-    plots.push({ id: `house-${blockId}-${idx}`, type: 'house', x: cx, z: cz, top: h + 1, ownerId: null });
+    let top = h + 1;
+    if (owner) {
+      // flag in the owner's colour on the roof
+      const fx = rc.x0 + bx + 0.6;
+      const fz = rc.z0 + bz + 0.6;
+      batch.add('gold', G.cyl, mat(fx, h + 2.5, fz, 0.07, 5, 0.07), '#d4a94a');
+      box('solid', mat(fx + 0.9, h + 4.3, fz, 1.8, 1.1, 0.06), owner.color);
+      // owner's lit band under the roof
+      box('lantern', mat(cx, h - 0.95, cz, w + 0.08, 0.12, d + 0.08), owner.color);
+      top = h + 5.5;
+    }
+    plots.push({ id, type: owner ? 'building' : 'house', x: cx, z: cz, top, owner: owner ? owner.username : null });
+    rng = mainRng;
+  }
+
+  function emptyLot(l) {
+    const { bx, bz, rc } = l;
+    const w = rc.x1 - rc.x0 - 0.6;
+    const d = rc.z1 - rc.z0 - 0.6;
+    const cx = bx + (rc.x0 + rc.x1) / 2;
+    const cz = bz + (rc.z0 + rc.z1) / 2;
+    const c = '#cdb38c';
+    box('solid', mat(cx, 0.03, cz, w, 0.06, d), '#d9bf94');
+    box('solid', mat(cx, 0.15, cz - d / 2, w, 0.3, 0.3), c);
+    box('solid', mat(cx, 0.15, cz + d / 2, w, 0.3, 0.3), c);
+    box('solid', mat(cx - w / 2, 0.15, cz, 0.3, 0.3, d), c);
+    box('solid', mat(cx + w / 2, 0.15, cz, 0.3, 0.3, d), c);
+    plots.push({ id: l.id, type: 'empty', x: cx, z: cz, top: 1, owner: null });
   }
 
   function courtyard(bx, bz, rc) {
@@ -210,6 +247,7 @@ export function buildCity(scene, materials, { seed = 7 } = {}) {
     batch.add('solid', G.sphere, mat(cx + 0.6, 3.5, cz - 0.4, 1.0, 0.9, 1.0), '#5f9142');
   }
 
+  const lots = [];
   function residentialBlock(i, j) {
     const bx = i * S;
     const bz = j * S;
@@ -217,10 +255,14 @@ export function buildCity(scene, materials, { seed = 7 } = {}) {
     subdivide({ x0: -B / 2, x1: B / 2, z0: -B / 2, z1: B / 2 }, rects);
     rects.forEach((rc, k) => {
       const touches = rc.x0 <= -B / 2 + 0.01 || rc.x1 >= B / 2 - 0.01 || rc.z0 <= -B / 2 + 0.01 || rc.z1 >= B / 2 - 0.01;
-      if (touches) house(bx, bz, rc, `${i}_${j}`, k);
-      else courtyard(bx, bz, rc);
+      if (touches) {
+        const cx = bx + (rc.x0 + rc.x1) / 2;
+        const cz = bz + (rc.z0 + rc.z1) / 2;
+        lots.push({ bx, bz, rc, id: `house-${i}_${j}-${k}`, d: Math.hypot(cx, cz), big: Math.min(rc.x1 - rc.x0, rc.z1 - rc.z0) >= 4 });
+      } else courtyards.push({ bx, bz, rc, block: `${i}_${j}` });
     });
   }
+  const courtyards = [];
 
   // ---- Palm tree --------------------------------------------------------------
   function palm(x, z, hgt = 7 + r() * 3) {
@@ -285,6 +327,16 @@ export function buildCity(scene, materials, { seed = 7 } = {}) {
       residentialBlock(i, j);
     }
   }
+  // Only `buildings` lots are built (nearest to the square first); owner k gets lot k.
+  // The rest of the land stays empty (marked foundations) for the city to grow into.
+  const sorted = [...lots].sort((a, b) => a.d - b.d || a.id.localeCompare(b.id));
+  const built = new Set();
+  sorted.slice(0, buildings).forEach((l, k) => {
+    house(l.bx, l.bz, l.rc, l.id, owners[k]);
+    built.add(`${l.bx},${l.bz}`);
+  });
+  for (const l of sorted.slice(buildings)) emptyLot(l);
+  for (const c of courtyards) if (built.has(`${c.bx},${c.bz}`)) courtyard(c.bx, c.bz, c.rc);
 
   // Souq stalls on both sides of the main street
   for (let i = -N; i <= N; i++) {

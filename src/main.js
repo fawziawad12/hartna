@@ -10,7 +10,7 @@ import { Residents } from './residents.js';
 import { createSky } from './sky.js';
 import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
-import { LADDER, CURRENCY, currentTier, nextTier, ownedPlots } from './economy.js';
+import { LADDER, CURRENCY, currentTier, nextTier, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -48,23 +48,13 @@ sun.shadow.normalBias = 0.04;
 scene.add(sun, sun.target);
 
 const materials = createMaterials();
-const city = buildCity(scene, materials);
+let city;
 const graph = buildStreetGraph();
 const minaret = new Minaret(scene, materials);
 const residents = new Residents(scene, graph);
 const cinema = new Cinematic(Number(params.get('duration')) || 60);
 
-// A few real lights around the square for the night.
 const pointLights = [];
-city.lights
-  .filter((p) => Math.hypot(p.x, p.z) < 40)
-  .slice(0, 10)
-  .forEach((p) => {
-    const l = new THREE.PointLight('#ffae55', 0, 14, 1.6);
-    l.position.copy(p);
-    scene.add(l);
-    pointLights.push(l);
-  });
 
 // ---- Post processing ------------------------------------------------------------
 const composer = new EffectComposer(renderer);
@@ -132,13 +122,12 @@ function applyTime(t) {
   scene.fog.color.copy(C('#eab88a', '#1c1828', t));
   materials.lantern.color.setScalar(THREE.MathUtils.lerp(1.6, 4.5, t));
   materials.window.color.setScalar(THREE.MathUtils.lerp(0.13, 1.8, t));
-  city.bulbMat.color.setScalar(THREE.MathUtils.lerp(0.95, 2.2, t));
+  if (city) city.bulbMat.color.setScalar(THREE.MathUtils.lerp(0.95, 2.2, t));
   pointLights.forEach((l) => (l.intensity = THREE.MathUtils.lerp(0, 22, t)));
   bloom.strength = THREE.MathUtils.lerp(0.35, 0.75, t);
   bloom.threshold = THREE.MathUtils.lerp(0.9, 0.78, t);
   renderer.toneMappingExposure = THREE.MathUtils.lerp(1.0, 1.15, t);
 }
-applyTime(night);
 
 // ---- Sizing (normal + 9:16 reels frame) ------------------------------------------------
 let reels = params.has('reels');
@@ -165,24 +154,25 @@ async function loadData() {
   return res.json();
 }
 
-function placeOwnerLabels(list) {
+function placeOwnerLabels() {
   ownerLabels.forEach((l) => scene.remove(l));
   ownerLabels.length = 0;
-  const owned = ownedPlots(list);
   for (const plot of city.plots) {
-    const o = owned.get(plot.id);
-    if (!o) continue;
-    const tier = LADDER.find((t) => t.key === o.asset.type) || LADDER[0];
-    const l = makeLabel(`${tier.emoji} ${tier.ar} @${o.resident.username}`, { height: 0.8, bg: 'rgba(60,30,10,0.7)' });
-    l.position.set(plot.x, plot.top + 0.8, plot.z);
+    if (!plot.owner) continue;
+    const w = residents.list.find((r) => r.data.username === plot.owner);
+    const l = makeLabel(`🏢 عمارة @${plot.owner}`, { height: 1.1, size: 48, bg: 'rgba(60,30,10,0.72)' });
+    l.position.set(plot.x, plot.top + 1, plot.z);
     scene.add(l);
     ownerLabels.push(l);
+    if (w) w.home = plot;
   }
 }
 
 function updateStats(data) {
   $('followers').textContent = data.city.followers.toLocaleString('en-US');
   $('residents').textContent = residents.list.length.toLocaleString('en-US');
+  const free = Math.max(0, 100 - residents.list.length);
+  $('free').textContent = free.toLocaleString('en-US');
   const dl = $('names');
   dl.innerHTML = '';
   residents.list.forEach((w) => {
@@ -199,9 +189,11 @@ function showCard(w) {
   const next = nextTier(d);
   $('card-name').textContent = d.displayName || d.username;
   $('card-user').textContent = '@' + d.username;
-  $('card-joined').textContent = d.joinedAt ? `ساكن من ${d.joinedAt}` : '';
+  $('card-joined').textContent = `ساكن رقم ${d.number}` + (d.joinedAt ? ` · من ${d.joinedAt}` : '');
   $('card-money').textContent = `${CURRENCY.emoji} ${(d.money || 0).toLocaleString('en-US')} ${CURRENCY.ar}`;
-  $('card-has').textContent = tier.key === 'phone' ? '📱 عنده موبايل بس، لسا ما عنده بيت' : `${tier.emoji} عنده ${tier.ar}`;
+  const free = d.assets.some((a) => a.type === 'building' && a.free);
+  $('card-has').textContent = tier.key === 'phone' ? '📱 عنده موبايل بس، لسا ما عنده بيت' : free ? `📱 موبايل + 🏢 عمارة هدية (من أول 100)` : `${tier.emoji} عنده ${tier.ar}`;
+  $('card-home').style.display = w.home ? '' : 'none';
   $('card-next').textContent = next ? `الخطوة الجاية: ${next.emoji} ${next.ar} (${next.price.toLocaleString('en-US')} ${CURRENCY.emoji})` : 'وصل للقمة 🏆';
   $('ladder').innerHTML = LADDER.map((t) => `<span class="${t.key === tier.key ? 'on' : ''}" title="${t.ar}">${t.emoji}</span>`).join('<i>›</i>');
   $('card').classList.add('show');
@@ -242,6 +234,15 @@ $('btn-reels').onclick = toggleReels;
 $('btn-clean').onclick = toggleUI;
 $('btn-names').onclick = () => (residents.labelsVisible = !residents.labelsVisible);
 $('card-close').onclick = () => setMode('orbit');
+$('card-home').onclick = () => {
+  if (!followed || !followed.home) return;
+  const h = followed.home;
+  setMode('orbit');
+  controls.autoRotate = true;
+  lookNow.set(h.x, h.top - 3, h.z);
+  controls.target.copy(lookNow);
+  camera.position.set(h.x + 22, h.top + 16, h.z + 22);
+};
 $('search').addEventListener('change', (e) => {
   const w = residents.find(e.target.value);
   if (w) {
@@ -274,6 +275,10 @@ function frame() {
     applyTime(night);
   }
   residents.update(dt, camera);
+  for (const l of ownerLabels) {
+    const k = THREE.MathUtils.clamp(camera.position.distanceTo(l.position) / 30, 1, 4);
+    l.scale.set(l.userData.baseScale.x * k, l.userData.baseScale.y * k, 1);
+  }
   minaret.update(dt);
   if (mode === 'orbit') {
     controls.update();
@@ -297,11 +302,27 @@ function frame() {
     await Promise.race([document.fonts.load('700 44px Cairo'), new Promise((r) => setTimeout(r, 2500))]);
   } catch {}
   const data = await loadData();
-  const followers = Number(params.get('followers')) || data.city.followers;
-  data.city.followers = followers;
+  const list = normalizeResidents(data.residents || []);
+  const followers = Number(params.get('followers')) || data.followers || data.city?.followers || list.length;
+  data.city = { followers };
+  const owners = list
+    .filter((r) => r.assets.some((a) => a.type === 'building'))
+    .map((r) => ({ username: r.username, color: '#' + new THREE.Color().setHSL(((r.number * 0.618) % 1), 0.65, 0.5).getHexString() }));
+  city = buildCity(scene, materials, { owners, buildings: 100 });
+  // A few real lights around the square for the night.
+  city.lights
+    .filter((p) => Math.hypot(p.x, p.z) < 40)
+    .slice(0, 10)
+    .forEach((p) => {
+      const l = new THREE.PointLight('#ffae55', 0, 14, 1.6);
+      l.position.copy(p);
+      scene.add(l);
+      pointLights.push(l);
+    });
+  applyTime(night);
   minaret.setFollowers(followers, false);
-  data.residents.forEach((r) => residents.add(r));
-  placeOwnerLabels(data.residents);
+  list.forEach((r) => residents.add(r));
+  placeOwnerLabels();
   updateStats(data);
   if (params.get('mode')) setMode(params.get('mode'));
   $('loading').classList.add('done');

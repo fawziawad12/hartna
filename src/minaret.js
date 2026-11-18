@@ -2,9 +2,9 @@ import * as THREE from 'three';
 import { makeLabel } from './labels.js';
 
 // The big landmark in the square. It grows with the follower count:
-// ~30m at 1k followers, ~50m at 10k, ~75m at 100k, ~100m at 1M.
+// ~26m at the start, ~45m at 1k, ~75m at 10k, ~110m at 1M.
 export function minaretHeight(followers) {
-  return 14 + 8.5 * Math.log2(1 + Math.max(0, followers) / 180);
+  return 26 + 8.5 * Math.log2(1 + Math.max(0, followers) / 180);
 }
 
 const stoneA = '#e9d6b2';

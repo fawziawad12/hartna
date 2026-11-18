@@ -63,3 +63,4 @@ body.reels #card { right: 50%; transform: translateX(50%); bottom: 140px; }
   .bar button { min-width: 52px; padding: 6px; }
   #card { right: 16px; left: 16px; width: auto; bottom: 140px; }
 }
+.home-btn { margin-top: 4px; font: inherit; font-size: 13px; color: #2a1606; background: var(--gold); border: 0; border-radius: 999px; padding: 6px 12px; cursor: pointer; font-weight: 700; }

@@ -28,30 +28,30 @@ URL options: `?mode=cinema`, `?time=night`, `?reels`, `?followers=25000` (previe
 
 ## Data: `public/data/residents.json`
 
-```jsonc
+Only real followers live in the city. To add someone, add a line at the END of the list (order = join order):
+
+```json
 {
-  "city": { "name": "حارتنا", "instagram": "", "followers": 1240 },
+  "instagram": "whatif_dream",
+  "followers": 5,
   "residents": [
-    {
-      "id": "r001",
-      "username": "abu_salem",        // Instagram username
-      "displayName": "أبو سالم",
-      "joinedAt": "2026-10-01",
-      "source": "comment",            // people join by commenting
-      "money": 0,                     // virtual only
-      "assets": [{ "type": "phone" }] // everyone starts with ONLY a phone
-    }
+    { "username": "mo_awad0", "name": "مُحَمَّد عَواد" },
+    { "username": "fawzi_1_1", "name": "Fawzi" }
   ]
 }
 ```
 
+- The city has exactly **100 buildings**. The first 100 residents each get one free building (with their name and a flag on the roof); the nearest buildings to the square go to the earliest residents. The rest of the land is empty foundations for future growth.
+- Resident #101 and after start with only a phone 📱.
+- Optional per resident: `joinedAt`, `money` (virtual), `assets`.
+
 Later phases: an Instagram comments webhook will append residents to this data; the economy (phase 3) adds owned places as assets with a plot id, e.g. `{ "type": "stall", "plotId": "stall-12" }`, and the city shows the owner's name over that plot. The ladder lives in `src/economy.js`: 📱 phone → 🛒 stall → 🏪 shop → 🏠 house → 🚗 car → 🏢 building → 🏙️ tower.
 
-The city is generated from a fixed seed, so plot ids (`stall-1` … `stall-78`, `house-<block>-<n>`) are stable between loads.
+The city is generated from a fixed seed, so plot ids (`stall-1` … `stall-78`, `house-<block>-<n>`) are stable between loads, and each house has its own random stream so changing one never reshapes the others.
 
 ## The minaret
 
-The minaret in the square grows with the follower count (`src/minaret.js`): about 30 m at 1k, 50 m at 10k, 75 m at 100k and 100 m at 1M followers.
+The minaret in the square grows with the follower count (`src/minaret.js`): about 26 m at the start, 45 m at 1k, 75 m at 10k and 110 m at 1M followers.
 
 ## Files
 
