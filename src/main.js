@@ -10,6 +10,7 @@ import { Residents } from './residents.js';
 import { createSky } from './sky.js';
 import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
+import { CityAudio } from './audio.js';
 import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
@@ -358,6 +359,26 @@ $('shop-clothes').innerHTML = OUTFITS.map(
   (o) => `<div class="item"><div class="ic swatch" style="background:${o.cloth}"></div><div class="tx"><b>${o.ar}</b>${o.price ? '' : '<span>اللبس الموحّد لكل الساكنين</span>'}</div><div class="pr">${o.price ? fmt(o.price) + ' ' + CURRENCY.emoji : 'مجاني'}</div></div>`,
 ).join('');
 $('shop-market').innerHTML = MARKET_RULES.map((m) => `<div class="item"><div class="ic">${m.emoji}</div><div class="tx"><b>${m.ar}</b><span>${m.desc}</span></div></div>`).join('') + '<p class="muted">ما في بيوت معروضة هلأ.</p>';
+// ---- Sound: starts on the first tap anywhere (browsers need a tap), the 🔊 button mutes it ----------------
+const audio = new CityAudio();
+const setSoundIcon = (on) => ($('btn-sound').firstChild.textContent = on ? '🔊' : '🔇');
+async function setSound(on) {
+  const r = await audio.toggle(on);
+  setSoundIcon(r);
+  store.set('hartna_sound', r ? '1' : '0');
+}
+$('btn-sound').onclick = (e) => {
+  e.stopPropagation();
+  setSound(!audio.on);
+};
+addEventListener(
+  'pointerdown',
+  () => {
+    if (store.get('hartna_sound') !== '0' && !audio.on) setSound(true);
+  },
+  { once: true },
+);
+
 $('btn-shop').onclick = () => $('shop').classList.toggle('show');
 $('shop-close').onclick = () => $('shop').classList.remove('show');
 
@@ -421,6 +442,7 @@ function frame() {
   list.forEach((r) => residents.add(r));
   placeOwnerLabels();
   updateStats(data);
+  audio.setPopulation(residents.list.length);
   if (params.get('mode')) setMode(params.get('mode'));
   $('loading').classList.add('done');
   window.hartna = { scene, camera, residents, minaret, setMode, setFollowers: (n) => minaret.setFollowers(n), city };
