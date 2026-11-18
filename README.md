@@ -41,7 +41,7 @@ Only real followers live in the city. To add someone, add a line at the END of t
 }
 ```
 
-- The city has exactly **100 buildings**. The first 100 residents each get one free building (with their name and a flag on the roof); the nearest buildings to the square go to the earliest residents. The rest of the land is empty foundations for future growth.
+- The city has exactly **100 buildings**. The first 100 residents each get one free building (a small one-person house, two floors, with their name and a flag on the roof); the nearest buildings to the square go to the earliest residents. The rest of the land is empty foundations for future growth.
 - Resident #101 and after start with only a phone 📱.
 - Optional per resident: `joinedAt`, `money` (virtual), `assets`.
 

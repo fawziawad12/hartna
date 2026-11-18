@@ -160,7 +160,7 @@ function placeOwnerLabels() {
   for (const plot of city.plots) {
     if (!plot.owner) continue;
     const w = residents.list.find((r) => r.data.username === plot.owner);
-    const l = makeLabel(`🏢 عمارة @${plot.owner}`, { height: 1.1, size: 48, bg: 'rgba(60,30,10,0.72)' });
+    const l = makeLabel(`🏢 عمارة @${plot.owner}`, { height: 0.9, size: 48, bg: 'rgba(60,30,10,0.72)' });
     l.position.set(plot.x, plot.top + 1, plot.z);
     scene.add(l);
     ownerLabels.push(l);
@@ -276,7 +276,7 @@ function frame() {
   }
   residents.update(dt, camera);
   for (const l of ownerLabels) {
-    const k = THREE.MathUtils.clamp(camera.position.distanceTo(l.position) / 30, 1, 4);
+    const k = THREE.MathUtils.clamp(camera.position.distanceTo(l.position) / 30, 1, 2.6);
     l.scale.set(l.userData.baseScale.x * k, l.userData.baseScale.y * k, 1);
   }
   minaret.update(dt);

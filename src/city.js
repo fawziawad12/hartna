@@ -112,7 +112,7 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
   function subdivide(rc, out, depth = 0) {
     const w = rc.x1 - rc.x0;
     const d = rc.z1 - rc.z0;
-    if ((w < 8 && d < 8) || (depth > 1 && w < 11 && d < 11 && r() < 0.35)) return out.push(rc);
+    if ((w < 6.5 && d < 6.5) || (depth > 2 && w < 8 && d < 8 && r() < 0.35)) return out.push(rc);
     if (w >= d) {
       const cut = rc.x0 + w * (0.35 + r() * 0.3);
       subdivide({ ...rc, x1: cut }, out, depth + 1);
@@ -166,15 +166,32 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
   function house(bx, bz, rc, id, owner) {
     // every house has its own random stream, so making one taller never changes the others
     rng = mulberry32(hashString(id));
+    // a small one-person house: at most HOUSE x HOUSE, kept against the street;
+    // what is left of the lot becomes a little yard
+    const lot = rc;
+    rc = { ...rc };
+    const HOUSE = 5;
+    const fit = (a0, a1, edge0, edge1) => {
+      if (a1 - a0 <= HOUSE) return [a0, a1];
+      if (edge0) return [a0, a0 + HOUSE];
+      if (edge1) return [a1 - HOUSE, a1];
+      const m = (a0 + a1) / 2;
+      return [m - HOUSE / 2, m + HOUSE / 2];
+    };
+    [rc.x0, rc.x1] = fit(rc.x0, rc.x1, rc.x0 <= -B / 2 + 0.01, rc.x1 >= B / 2 - 0.01);
+    [rc.z0, rc.z1] = fit(rc.z0, rc.z1, rc.z0 <= -B / 2 + 0.01, rc.z1 >= B / 2 - 0.01);
+    if (rc.x1 - rc.x0 < lot.x1 - lot.x0 - 0.01 || rc.z1 - rc.z0 < lot.z1 - lot.z0 - 0.01) {
+      box('solid', mat(bx + (lot.x0 + lot.x1) / 2, 0.03, bz + (lot.z0 + lot.z1) / 2, lot.x1 - lot.x0 - 0.2, 0.06, lot.z1 - lot.z0 - 0.2), '#d9bf94');
+    }
     const w = rc.x1 - rc.x0;
     const d = rc.z1 - rc.z0;
     const cx = bx + (rc.x0 + rc.x1) / 2;
     const cz = bz + (rc.z0 + rc.z1) / 2;
-    let floors = 2 + Math.floor(r() * 3);
+    let floors = 1 + Math.floor(r() * 2);
     let h = floors * 3.2 + r() * 0.5;
     let stone = pick(rng, STONE);
     if (owner) {
-      floors = 5;
+      floors = 2;
       h = floors * 3.2 + 0.3;
       stone = '#f3e4c4';
     }
