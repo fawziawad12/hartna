@@ -17,17 +17,23 @@ export function normalizeResidents(list) {
     if (!username || seen.has(username.toLowerCase())) continue;
     seen.add(username.toLowerCase());
     const number = out.length + 1;
-    const assets = raw.assets ? [...raw.assets] : [{ type: 'phone' }];
-    if (number <= FREE_BUILDINGS && !assets.some((a) => a.type === 'home')) assets.push({ type: 'home', free: true });
+    const fromServer = raw.balanceAt != null;
+    const number2 = raw.number || number;
+    const assets = (raw.assets ? raw.assets.map((a) => ({ ...a })) : []).filter((a) => a.type !== 'phone');
+    if (!fromServer && number2 <= FREE_BUILDINGS && !assets.some((a) => a.type === 'home')) assets.push({ type: 'home', plotIndex: number2 });
+    for (const a of assets) if (a.type === 'home') a.free = true;
     out.push({
       id: raw.id || username,
-      number,
+      number: number2,
       username,
       displayName: raw.name || raw.displayName || username,
       joinedAt: raw.joinedAt || null,
       money: raw.money || 0,
       spent: raw.spent || 0,
       age: raw.age || null,
+      balance: raw.balance,
+      balanceAt: raw.balanceAt || null,
+      income: raw.income ?? null,
       outfit: raw.outfit || 'hartna',
       assets,
     });
@@ -81,6 +87,7 @@ export const EARN_RULES = [
 ];
 
 export function incomePerHour(resident) {
+  if (resident.income != null) return Number(resident.income);
   let total = BASE_INCOME_PER_HOUR;
   for (const a of resident.assets || []) {
     if (a.type === 'home') total += HOME_RENT_PER_HOUR;
@@ -91,6 +98,7 @@ export function incomePerHour(resident) {
 }
 
 export function moneyNow(resident, now = Date.now()) {
+  if (resident.balanceAt) return Math.floor(Number(resident.balance) + ((now - Date.parse(resident.balanceAt)) / 3600000) * incomePerHour(resident));
   const start = resident.joinedAt ? Date.parse(resident.joinedAt + (resident.joinedAt.length <= 10 ? 'T00:00:00+03:00' : '')) : now;
   const hours = Math.max(0, (now - start) / 3600000);
   return Math.floor((resident.money || 0) + hours * incomePerHour(resident) - (resident.spent || 0));

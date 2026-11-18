@@ -30,6 +30,7 @@
       <button data-mode="orbit" class="active" title="O">🌀<span>دوران</span></button>
       <button data-mode="cinema" title="C">🎬<span>جولة</span></button>
       <button data-mode="follow" title="F">🚶<span>لحّق ساكن</span></button>
+      <button id="btn-acct">👤<span>حسابي</span></button>
       <button id="btn-shop">🛍️<span>المتجر</span></button>
       <button id="btn-names" title="L">🏷️<span>الأسماء</span></button>
       <button id="btn-sound">🔇<span>صوت</span></button>
@@ -59,8 +60,15 @@
       <div id="shop-market"></div>
       <h3>👕 متجر الأواعي</h3>
       <div id="shop-clothes"></div>
-      <p class="soon">الشراء رح يفتح قريباً 🔒</p>
+      <button class="gold" id="shop-login" hidden>👤 سجّل دخول لتشتري</button>
     </section>
+    <section id="acct" class="panel">
+      <button id="acct-close" aria-label="سكّر">✕</button>
+      <h2>👤 حسابي</h2>
+      <div id="acct-body"></div>
+      <div id="admin-tools" hidden></div>
+    </section>
+    <div id="toast"></div>
   </div>
   <button id="exit-clean" title="Esc">✕ خروج من التسجيل</button>
   <div id="loading"><div class="logo">حارتنا</div><div>عم نعمّر الحارة…</div></div>

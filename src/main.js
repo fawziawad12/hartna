@@ -11,6 +11,7 @@ import { createSky } from './sky.js';
 import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
 import { CityAudio } from './audio.js';
+import { online, rpc } from './api.js';
 import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
@@ -184,11 +185,14 @@ async function loadData() {
 function placeOwnerLabels() {
   ownerLabels.forEach((l) => scene.remove(l));
   ownerLabels.length = 0;
+  for (const w of residents.list) w.home = null;
   for (const plot of city.plots) {
     if (!plot.owner) continue;
     // no tag over houses: the name is shown on the person walking around; the house keeps its flag
     const w = residents.list.find((r) => r.data.username === plot.owner);
-    if (w) w.home = plot;
+    if (!w) continue;
+    const homeLot = w.data.assets.find((a) => a.type === 'home')?.plotIndex;
+    if (!w.home || plot.lot === homeLot) w.home = plot;
   }
 }
 
@@ -227,6 +231,9 @@ function showCard(w) {
   $('card').classList.add('show');
 }
 let cardResident = null;
+const refreshCard = () => {
+  if (cardResident && followed && $('card').classList.contains('show')) showCard(followed);
+};
 function updateCardMoney() {
   if (!cardResident) return;
   $('card-money').textContent = `${CURRENCY.emoji} ${fmt(moneyNow(cardResident))} ${CURRENCY.ar}`;
@@ -340,6 +347,7 @@ addEventListener('keydown', (e) => {
   if (e.key === 'Escape') {
     document.body.classList.remove('clean');
     $('shop').classList.remove('show');
+    $('acct').classList.remove('show');
   }
   if (k === 'h') toggleUI();
   if (k === 'n') toggleNight();
@@ -352,13 +360,13 @@ addEventListener('keydown', (e) => {
 
 // ---- Shop -----------------------------------------------------------------------------------------
 $('shop-items').innerHTML = SHOP.map(
-  (i) => `<div class="item"><div class="ic">${i.emoji}</div><div class="tx"><b>${i.ar}</b><span>${i.desc}</span>${i.incomePerHour ? `<em>+${fmt(i.incomePerHour)} ${CURRENCY.emoji} بالساعة</em>` : ''}</div><div class="pr">${fmt(i.price)} ${CURRENCY.emoji}</div></div>`,
+  (i) => `<div class="item"><div class="ic">${i.emoji}</div><div class="tx"><b>${i.ar}</b><span>${i.desc}</span>${i.incomePerHour ? `<em>+${fmt(i.incomePerHour)} ${CURRENCY.emoji} بالساعة</em>` : ''}</div><div class="pr">${fmt(i.price)} ${CURRENCY.emoji}</div><button class="gold sm" data-buy="${i.key}" hidden>اشتري</button></div>`,
 ).join('');
 $('shop-earn').innerHTML = EARN_RULES.map((r) => `<div class="rule"><span>${r.emoji} ${r.ar}</span><b>+${fmt(r.amount)} ${CURRENCY.emoji}${r.perHour ? ' بالساعة' : ''}</b>${r.live ? '' : '<i>قريباً</i>'}</div>`).join('');
 $('shop-clothes').innerHTML = OUTFITS.map(
-  (o) => `<div class="item"><div class="ic swatch" style="background:${o.cloth}"></div><div class="tx"><b>${o.ar}</b>${o.price ? '' : '<span>اللبس الموحّد لكل الساكنين</span>'}</div><div class="pr">${o.price ? fmt(o.price) + ' ' + CURRENCY.emoji : 'مجاني'}</div></div>`,
+  (o) => `<div class="item"><div class="ic swatch" style="background:${o.cloth}"></div><div class="tx"><b>${o.ar}</b>${o.price ? '' : '<span>اللبس الموحّد لكل الساكنين</span>'}</div><div class="pr">${o.price ? fmt(o.price) + ' ' + CURRENCY.emoji : 'مجاني'}</div><button class="gold sm" data-buy-outfit="${o.key}" hidden>اشتري</button></div>`,
 ).join('');
-$('shop-market').innerHTML = MARKET_RULES.map((m) => `<div class="item"><div class="ic">${m.emoji}</div><div class="tx"><b>${m.ar}</b><span>${m.desc}</span></div></div>`).join('') + '<p class="muted">ما في بيوت معروضة هلأ.</p>';
+$('shop-market').innerHTML = MARKET_RULES.map((m) => `<div class="item"><div class="ic">${m.emoji}</div><div class="tx"><b>${m.ar}</b><span>${m.desc}</span></div></div>`).join('') + '<h3>🏷️ بيوت معروضة</h3><div id="market-list"></div>';
 // ---- Sound: starts on the first tap anywhere (browsers need a tap), the 🔊 button mutes it ----------------
 const audio = new CityAudio();
 const setSoundIcon = (on) => ($('btn-sound').firstChild.textContent = on ? '🔊' : '🔇');
@@ -379,7 +387,10 @@ addEventListener(
   { once: true },
 );
 
-$('btn-shop').onclick = () => $('shop').classList.toggle('show');
+$('btn-shop').onclick = () => {
+  $('acct').classList.remove('show');
+  $('shop').classList.toggle('show');
+};
 $('shop-close').onclick = () => $('shop').classList.remove('show');
 
 // ---- Loop -----------------------------------------------------------------------------------------
@@ -414,37 +425,345 @@ function frame() {
   requestAnimationFrame(frame);
 }
 
+// ---- City data: from Supabase when connected, else from data/residents.json -------------------------------
+const colorFor = (n) => '#' + new THREE.Color().setHSL((n * 0.618) % 1, 0.65, 0.5).getHexString();
+let ownersSig = null;
+let cityList = [];
+let shownFollowers = null;
+
+function buildTheCity(list) {
+  const owners = [];
+  for (const r of list)
+    for (const a of r.assets) if ((a.type === 'home' || a.type === 'house') && a.plotIndex) owners[a.plotIndex - 1] = { username: r.username, color: colorFor(r.number) };
+  const sig = Array.from(owners, (o, i) => (o ? `${i}:${o.username}` : '')).join(',');
+  if (city && sig === ownersSig) return;
+  const firstBuild = !city;
+  if (city) city.dispose();
+  ownersSig = sig;
+  city = buildCity(scene, materials, { owners, buildings: Math.max(100, owners.length) });
+  if (firstBuild) {
+    // A few real lights around the square for the night.
+    city.lights
+      .filter((p) => Math.hypot(p.x, p.z) < 40)
+      .slice(0, 10)
+      .forEach((p) => {
+        const l = new THREE.PointLight('#ffae55', 0, 14, 1.6);
+        l.position.copy(p);
+        scene.add(l);
+        pointLights.push(l);
+      });
+  }
+  applyTime(night);
+  if (highlightPlot) showHome(city.plots.find((p) => p.lot === highlightPlot.lot) || null);
+}
+
+function syncResidents(list) {
+  const byName = new Map(residents.list.map((w) => [w.data.username, w]));
+  for (const r of list) {
+    const w = byName.get(r.username);
+    if (!w) residents.add(r);
+    else if (w.data.outfit !== r.outfit) {
+      const n = residents.replace(w, r);
+      if (followed === w) followed = n;
+    } else w.data = r;
+  }
+  for (const w of [...residents.list]) if (!list.some((r) => r.username === w.data.username)) residents.remove(w);
+  placeOwnerLabels();
+  if (followed) cardResident = followed.data;
+}
+
+async function fetchCity() {
+  if (online) {
+    const c = await rpc('get_city');
+    return { followers: c.followers, instagram: c.instagram, residents: c.residents };
+  }
+  return loadData();
+}
+
+async function refreshCity() {
+  const data = await fetchCity();
+  const list = normalizeResidents(data.residents || []);
+  const followers = Number(params.get('followers')) || data.followers || list.length;
+  data.city = { followers };
+  buildTheCity(list);
+  syncResidents(list);
+  if (shownFollowers !== followers) minaret.setFollowers(followers, shownFollowers !== null);
+  shownFollowers = followers;
+  cityList = list;
+  updateStats(data);
+  audio.setPopulation(residents.list.length);
+  renderMarket();
+  refreshCard();
+}
+
+// ---- Account (login by commenting a code), profile, buying ------------------------------------------------
+let token = store.get('hartna_token');
+let me = null;
+let pendingLogin = null;
+const toast = (msg, bad) => {
+  const t = $('toast');
+  t.textContent = msg;
+  t.classList.toggle('bad', !!bad);
+  t.classList.add('show');
+  clearTimeout(toast.t);
+  toast.t = setTimeout(() => t.classList.remove('show'), 3200);
+};
+const esc = (v) => String(v ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+async function act(fn, args, okMsg) {
+  try {
+    me = await rpc(fn, { p_token: token, ...args });
+    if (okMsg) toast(okMsg);
+    renderAccount();
+    renderShopButtons();
+    refreshCity();
+  } catch (e) {
+    toast(e.message, true);
+  }
+}
+
+async function loadMe() {
+  if (online && token) {
+    try {
+      me = await rpc('my_profile', { p_token: token });
+    } catch (e) {
+      if (e.raw === 'not logged in') {
+        token = null;
+        store.set('hartna_token', null);
+        me = null;
+      }
+    }
+  }
+  renderAccount();
+  renderShopButtons();
+}
+
+const SHOP_LABEL = (type, ref) => {
+  if (type === 'home') return '🏠 بيت هدية';
+  if (type === 'outfit') return `👕 ${OUTFITS.find((o) => o.key === ref)?.ar || ref}`;
+  const i = SHOP.find((x) => x.key === type);
+  return i ? `${i.emoji} ${i.ar}` : type;
+};
+
+function renderAccount() {
+  const el = $('acct-body');
+  if (!online) {
+    el.innerHTML = `<p>تسجيل الدخول رح يفتح قريباً 🔒</p><p class="muted">لما يفتح، بتكتب اسمك بالإنستغرام وبتعلّق كود صغير على بوست، وبيصير إلك حساب.</p>`;
+    return;
+  }
+  if (!me) {
+    if (pendingLogin) {
+      el.innerHTML = `<p>علّق هالكود على أي بوست بحساب <b>@${esc(cityInstagram())}</b>:</p>
+        <div class="code">${esc(pendingLogin.code)}</div>
+        <p class="muted">⏳ عم نستنى تعليقك… بياخد كم دقيقة. خلّي الصفحة مفتوحة.</p>
+        <button class="ghost" id="acct-cancel">إلغاء</button>`;
+      $('acct-cancel').onclick = () => {
+        pendingLogin = null;
+        renderAccount();
+      };
+      return;
+    }
+    el.innerHTML = `<p>اكتب اسمك بالإنستغرام:</p>
+      <input id="acct-user" placeholder="@username" autocomplete="off" dir="ltr" />
+      <button class="gold" id="acct-go">جيب الكود</button>
+      <p class="muted">ما في باسوورد. بنعطيك كود، وبتعلّقه على بوست، وخلص.</p>`;
+    $('acct-go').onclick = async () => {
+      const u = $('acct-user').value;
+      try {
+        const r = await rpc('request_code', { p_username: u });
+        pendingLogin = { username: u, code: r.code };
+        renderAccount();
+        pollLogin();
+      } catch (e) {
+        toast(e.message, true);
+      }
+    };
+    return;
+  }
+  const houses = me.assets.filter((a) => a.type === 'home' || a.type === 'house');
+  const others = me.assets.filter((a) => !['home', 'house', 'outfit'].includes(a.type));
+  const outfits = ['hartna', ...me.assets.filter((a) => a.type === 'outfit').map((a) => a.ref)];
+  el.innerHTML = `
+    <div class="me-head"><b>@${esc(me.username)}</b><span>ساكن رقم ${me.number}</span></div>
+    <div class="money big" id="me-money"></div>
+    <div class="muted">بتكسب ${fmt(me.income)} ${CURRENCY.emoji} كل ساعة</div>
+    <h3>معلوماتي</h3>
+    <label>الاسم <input id="me-name" value="${esc(me.name || '')}" maxlength="40" /></label>
+    <label>العمر <input id="me-age" type="number" min="5" max="120" value="${esc(me.age || '')}" /></label>
+    <button class="gold" id="me-save">حفظ</button>
+    <h3>بيوتي</h3>
+    ${houses
+      .map(
+        (h) => `<div class="row"><span>${SHOP_LABEL(h.type)} · رقم ${h.plotIndex}</span>${
+          h.forSale
+            ? `<em>معروض بـ ${fmt(h.forSale)} ${CURRENCY.emoji}</em><button class="ghost" data-unlist="${h.id}">شيله من البيع</button>`
+            : `<input type="number" min="1" placeholder="السعر" id="price-${h.id}" /><button class="ghost" data-list="${h.id}">اعرضه للبيع</button>`
+        }</div>`,
+      )
+      .join('') || '<p class="muted">لسا ما عندك بيت.</p>'}
+    ${others.length ? `<h3>أغراضي</h3><p>${others.map((a) => SHOP_LABEL(a.type)).join(' · ')}</p>` : ''}
+    <h3>أواعيّ</h3>
+    <div class="chips">${outfits
+      .map((k) => {
+        const o = OUTFITS.find((x) => x.key === k);
+        return o ? `<button class="chip ${me.outfit === k ? 'on' : ''}" data-wear="${k}"><i style="background:${o.cloth}"></i>${o.ar}</button>` : '';
+      })
+      .join('')}</div>
+    <p class="muted">اشتري أواعي وبيوت وأغراض من 🛍️ المتجر.</p>
+    <button class="ghost" id="me-logout">تسجيل خروج</button>`;
+  updateMyMoney();
+  $('me-save').onclick = () => act('update_profile', { p_name: $('me-name').value, p_age: Number($('me-age').value) || null }, 'انحفظ ✅');
+  $('me-logout').onclick = async () => {
+    try {
+      await rpc('logout', { p_token: token });
+    } catch {}
+    token = null;
+    me = null;
+    store.set('hartna_token', null);
+    renderAccount();
+    renderShopButtons();
+  };
+  el.querySelectorAll('[data-wear]').forEach((b) => (b.onclick = () => act('wear', { p_outfit: b.dataset.wear }, 'لبست ✅')));
+  el.querySelectorAll('[data-unlist]').forEach((b) => (b.onclick = () => act('list_house', { p_item: Number(b.dataset.unlist), p_price: null }, 'شلته من البيع')));
+  el.querySelectorAll('[data-list]').forEach(
+    (b) =>
+      (b.onclick = () => {
+        const price = Number($('price-' + b.dataset.list).value);
+        if (!(price > 0)) return toast('اكتب سعر', true);
+        act('list_house', { p_item: Number(b.dataset.list), p_price: price }, 'بيتك صار معروض بسوق البيوت 🏷️');
+      }),
+  );
+}
+
+function updateMyMoney() {
+  if (!me || !$('me-money')) return;
+  const m = Number(me.balance) + ((Date.now() - (me._at ||= Date.now())) / 3600000) * Number(me.income);
+  $('me-money').textContent = `${CURRENCY.emoji} ${fmt(m)} ${CURRENCY.ar}`;
+}
+setInterval(updateMyMoney, 1000);
+
+async function pollLogin() {
+  const started = Date.now();
+  while (pendingLogin && Date.now() - started < 30 * 60000) {
+    await new Promise((r) => setTimeout(r, 5000));
+    if (!pendingLogin) return;
+    try {
+      const r = await rpc('check_code', { p_username: pendingLogin.username, p_code: pendingLogin.code });
+      if (r.status === 'ok') {
+        token = r.token;
+        store.set('hartna_token', token);
+        pendingLogin = null;
+        toast('أهلاً فيك بحارتنا 🎉');
+        await loadMe();
+        refreshCity();
+        return;
+      }
+      if (r.status === 'expired') {
+        pendingLogin = null;
+        toast('الكود خلص وقته، جيب كود جديد', true);
+        renderAccount();
+        return;
+      }
+    } catch {}
+  }
+}
+
+const cityInstagram = () => store.get('hartna_ig') || 'whatif_dream';
+
+// shop buttons (buy / wear) appear when logged in
+function renderShopButtons() {
+  document.querySelectorAll('[data-buy]').forEach((b) => (b.hidden = !me));
+  document.querySelectorAll('[data-buy-outfit]').forEach((b) => {
+    const k = b.dataset.buyOutfit;
+    const owned = k === 'hartna' || me?.assets.some((a) => a.type === 'outfit' && a.ref === k);
+    b.hidden = !me;
+    b.textContent = me?.outfit === k ? 'لابسه' : owned ? 'البس' : 'اشتري';
+    b.disabled = me?.outfit === k;
+  });
+  $('shop-login').hidden = !online || !!me;
+  renderMarket();
+}
+
+function renderMarket() {
+  const forSale = [];
+  for (const r of cityList) for (const a of r.assets) if (a.forSale) forSale.push({ r, a });
+  $('market-list').innerHTML = forSale.length
+    ? forSale
+        .map(
+          ({ r, a }) => `<div class="item"><div class="ic">🏠</div><div class="tx"><b>بيت @${esc(r.username)}</b><span>رقم ${a.plotIndex}</span></div><div class="pr">${fmt(a.forSale)} ${CURRENCY.emoji}</div>${
+            me && me.username !== r.username ? `<button class="gold sm" data-buy-house="${a.id}">اشتري</button>` : ''
+          }</div>`,
+        )
+        .join('')
+    : '<p class="muted">ما في بيوت معروضة هلأ.</p>';
+  document.querySelectorAll('[data-buy-house]').forEach((b) => (b.onclick = () => act('buy_house', { p_item: Number(b.dataset.buyHouse) }, 'مبروك البيت الجديد 🏠')));
+}
+
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-buy],[data-buy-outfit]');
+  if (!b || !me) return;
+  if (b.dataset.buy) act('buy', { p_type: b.dataset.buy, p_ref: null }, 'مبروك 🎉');
+  else {
+    const k = b.dataset.buyOutfit;
+    const owned = k === 'hartna' || me.assets.some((a) => a.type === 'outfit' && a.ref === k);
+    act(owned ? 'wear' : 'buy', owned ? { p_outfit: k } : { p_type: 'outfit', p_ref: k }, owned ? 'لبست ✅' : 'مبروك اللبس الجديد 👕');
+  }
+});
+$('btn-acct').onclick = () => {
+  $('shop').classList.remove('show');
+  $('acct').classList.toggle('show');
+};
+$('acct-close').onclick = () => $('acct').classList.remove('show');
+$('shop-login').onclick = () => {
+  $('shop').classList.remove('show');
+  $('acct').classList.add('show');
+};
+
+// admin tools (only in admin mode)
+if (isAdmin && online) {
+  const box = $('admin-tools');
+  box.hidden = false;
+  box.innerHTML = `<h3>🛠️ أدمن</h3>
+    <input id="ad-pw" type="password" placeholder="كلمة سر الأدمن" />
+    <input id="ad-user" placeholder="@username" dir="ltr" />
+    <input id="ad-name" placeholder="الاسم (اختياري)" />
+    <div class="chips"><button class="ghost" id="ad-add">ضيف ساكن</button><button class="ghost" id="ad-verify">وافق على دخوله</button><button class="ghost" id="ad-give">أعطيه مصاري</button></div>`;
+  $('ad-pw').value = sessionStorage.getItem('hartna_admin_pw') || '';
+  const pw = () => {
+    sessionStorage.setItem('hartna_admin_pw', $('ad-pw').value);
+    return $('ad-pw').value;
+  };
+  const run = async (fn, args, msg) => {
+    try {
+      await rpc(fn, { p_password: pw(), p_username: $('ad-user').value, ...args });
+      toast(msg);
+      refreshCity();
+    } catch (e) {
+      toast(e.message, true);
+    }
+  };
+  $('ad-add').onclick = () => run('admin_add', { p_name: $('ad-name').value || null }, 'انضاف ✅');
+  $('ad-verify').onclick = () => run('admin_verify', {}, 'تمت الموافقة ✅');
+  $('ad-give').onclick = () => {
+    const n = Number(prompt('قديش؟', '1000'));
+    if (n) run('admin_give', { p_amount: n }, 'انبعتت المصاري ✅');
+  };
+}
+
 // ---- Boot ---------------------------------------------------------------------------------------------
 (async () => {
   try {
     await Promise.race([document.fonts.load('700 44px Cairo'), new Promise((r) => setTimeout(r, 2500))]);
   } catch {}
-  const data = await loadData();
-  const list = normalizeResidents(data.residents || []);
-  const followers = Number(params.get('followers')) || data.followers || data.city?.followers || list.length;
-  data.city = { followers };
-  const owners = list
-    .filter((r) => r.assets.some((a) => a.type === 'home'))
-    .map((r) => ({ username: r.username, color: '#' + new THREE.Color().setHSL(((r.number * 0.618) % 1), 0.65, 0.5).getHexString() }));
-  city = buildCity(scene, materials, { owners, buildings: 100 });
-  // A few real lights around the square for the night.
-  city.lights
-    .filter((p) => Math.hypot(p.x, p.z) < 40)
-    .slice(0, 10)
-    .forEach((p) => {
-      const l = new THREE.PointLight('#ffae55', 0, 14, 1.6);
-      l.position.copy(p);
-      scene.add(l);
-      pointLights.push(l);
-    });
-  applyTime(night);
-  minaret.setFollowers(followers, false);
-  list.forEach((r) => residents.add(r));
-  placeOwnerLabels();
-  updateStats(data);
-  audio.setPopulation(residents.list.length);
+  try {
+    await refreshCity();
+  } catch (e) {
+    console.error(e);
+  }
   if (params.get('mode')) setMode(params.get('mode'));
   $('loading').classList.add('done');
-  window.hartna = { scene, camera, residents, minaret, setMode, setFollowers: (n) => minaret.setFollowers(n), city };
+  window.hartna = { scene, camera, residents, minaret, setMode, setFollowers: (n) => minaret.setFollowers(n), get city() { return city; } };
   frame();
+  loadMe();
+  if (online) setInterval(() => refreshCity().catch(() => {}), 20000);
 })();

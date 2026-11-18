@@ -207,6 +207,23 @@ export class Residents {
     }
   }
 
+  remove(w) {
+    this.scene.remove(w.body.group);
+    w.label.material.map.dispose();
+    this.hits = this.hits.filter((h) => h !== w.body.hit);
+    this.list = this.list.filter((x) => x !== w);
+  }
+
+  // rebuild one person (new outfit) keeping where they are walking
+  replace(w, data) {
+    const keep = { from: w.from, to: w.to, t: w.t, side: w.side };
+    this.remove(w);
+    const n = this.add(data);
+    Object.assign(n, keep);
+    n.home = w.home;
+    return n;
+  }
+
   find(q) {
     q = q.trim().replace(/^@/, '').toLowerCase();
     if (!q) return null;

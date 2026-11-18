@@ -71,10 +71,15 @@ export function createMaterials() {
 }
 
 // ---- The builder ------------------------------------------------------------
-// owners: [{ username, color }] in join order. Owner k gets the k-th building lot,
-// counted from the square outwards (the earliest residents get the best spots).
+// owners[k] = { username, color } owns house lot k+1. Lots are counted from the square
+// outwards, so lot 1 is the best spot; lots 1..100 are the free homes, in join order.
 export function buildCity(scene, materials, { seed = 7, owners = [], buildings = 100 } = {}) {
   const mainRng = mulberry32(seed);
+  const added = [];
+  const sceneAdd = (o) => {
+    scene.add(o);
+    added.push(o);
+  };
   let rng = mainRng;
   const batch = new Batch();
   const plots = []; // future ownership: stalls, houses...
@@ -104,7 +109,7 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
     dunes.computeVertexNormals();
     const m = new THREE.Mesh(dunes, materials.solid);
     m.receiveShadow = true;
-    scene.add(m);
+    sceneAdd(m);
     box('solid', mat(0, -0.05, 0, R * 2 + 6, 0.1, R * 2 + 6), '#b9a07c');
   }
 
@@ -350,6 +355,7 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
   const built = new Set();
   sorted.slice(0, buildings).forEach((l, k) => {
     house(l.bx, l.bz, l.rc, l.id, owners[k]);
+    plots[plots.length - 1].lot = k + 1;
     built.add(`${l.bx},${l.bz}`);
   });
   for (const l of sorted.slice(buildings)) emptyLot(l);
@@ -482,7 +488,7 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
   }
 
   const meshes = batch.build(materials, { shadows: ['solid', 'gold'] });
-  for (const m of Object.values(meshes)) scene.add(m);
+  for (const m of Object.values(meshes)) sceneAdd(m);
 
   // Bulbs: one instanced mesh
   const bulbGeo = new THREE.SphereGeometry(0.065, 8, 6);
@@ -493,9 +499,15 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
     bulbMesh.setMatrixAt(k, new THREE.Matrix4().makeTranslation(p.x, p.y, p.z));
     bulbMesh.setColorAt(k, new THREE.Color(bulbColors[k % bulbColors.length]));
   });
-  scene.add(bulbMesh);
+  sceneAdd(bulbMesh);
 
-  return { plots, lights, meshes, bulbMat };
+  const dispose = () => {
+    for (const o of added) {
+      scene.remove(o);
+      o.geometry?.dispose();
+    }
+  };
+  return { plots, lights, meshes, bulbMat, dispose };
 }
 
 // Walking graph: street intersections, connected to their 4 neighbours.

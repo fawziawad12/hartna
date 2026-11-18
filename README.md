@@ -20,7 +20,23 @@ Day and night follow the real time in Jordan (Asia/Amman).
 
 ## Money and shop
 
-Money is virtual and computed from each resident's `joinedAt`: everyone earns 6 🪙 per hour, plus the hourly income of anything they own (`src/economy.js`, `SHOP`). Buying is not open yet: it needs player accounts and a small backend.
+Money is virtual and computed from each resident's `joinedAt`: everyone earns 6 🪙 per hour, plus the hourly income of anything they own (`src/economy.js`, `SHOP`). Buying works once the Supabase backend is connected (below); without it the shop only shows prices.
+
+## Backend (Supabase, free)
+
+1. Create a project on supabase.com (region Frankfurt).
+2. Database → Extensions: enable **pg_cron** and **pg_net**.
+3. SQL Editor: paste `supabase/schema.sql` and Run (safe to re-run).
+4. Set the admin password (SQL Editor, change the text):
+   `insert into settings values ('admin_password_hash', encode(extensions.digest('YOUR-PASSWORD','sha256'),'hex')) on conflict (key) do update set value = excluded.value;`
+5. Put the Project URL and anon key in `src/config.js`, build and deploy.
+6. Instagram: when you have a long-lived Instagram token (Instagram API with Instagram Login, professional account),
+   `insert into settings values ('ig_token', 'TOKEN') on conflict (key) do update set value = excluded.value;`
+   Comments are then pulled every 5 minutes automatically: new commenters join the city, each comment pays +50 (max 10 a day), and a login code in a comment logs that person in.
+
+How login works: a visitor types their Instagram username, gets a code like `HRT-4821`, and comments it on any post. When the comment arrives, the site gives them a session; no passwords. Until Instagram is connected, the admin can approve a code by hand (admin tools in 👤 حسابي, admin mode only).
+
+All game rules live in two places that must agree: `src/economy.js` (what the site shows) and `hartna_price` / `hartna_income` in `supabase/schema.sql` (what the server charges).
 
 ## Controls
 
