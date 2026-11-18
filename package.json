@@ -1,0 +1,18 @@
+{
+  "name": "hartna",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "description": "حارتنا - a 3D old Arabic neighborhood that grows with an Instagram community",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "three": "0.170.0"
+  },
+  "devDependencies": {
+    "vite": "5.4.11"
+  }
+}

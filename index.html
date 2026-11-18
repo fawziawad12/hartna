@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>حارتنا</title>
+<meta name="description" content="حارتنا: حارة عربية قديمة ثلاثية الأبعاد بتكبر مع المتابعين" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./src/style.css" />
+</head>
+<body>
+<div id="stage">
+  <div id="hud">
+    <header class="brand">
+      <div class="logo">حارتنا</div>
+      <div class="sub">كل متابع إلو مطرح بالحارة</div>
+      <div class="stats">
+        <div><b id="followers">0</b><span>متابع ❤️</span></div>
+        <div><b id="residents">0</b><span>ساكن 🚶</span></div>
+      </div>
+    </header>
+    <div class="find">
+      <input id="search" list="names" placeholder="🔍 دوّر على اسمك…" autocomplete="off" />
+      <datalist id="names"></datalist>
+    </div>
+    <nav class="bar">
+      <button data-mode="orbit" class="active" title="O">🌀<span>دوران</span></button>
+      <button data-mode="cinema" title="C">🎬<span>جولة</span></button>
+      <button data-mode="follow" title="F">🚶<span>لحّق ساكن</span></button>
+      <button id="btn-night" title="N">🌙<span>ليل/نهار</span></button>
+      <button id="btn-names" title="L">🏷️<span>الأسماء</span></button>
+      <button id="btn-reels" title="R">📱<span>ريلز 9:16</span></button>
+      <button id="btn-clean" title="H">👁️<span>تسجيل</span></button>
+    </nav>
+    <aside id="card">
+      <button id="card-close" aria-label="سكّر">✕</button>
+      <div class="who"><b id="card-name"></b><span id="card-user"></span></div>
+      <div id="card-joined" class="muted"></div>
+      <div id="card-has"></div>
+      <div id="card-money" class="money"></div>
+      <div id="ladder" class="ladder"></div>
+      <div id="card-next" class="muted"></div>
+    </aside>
+  </div>
+  <div id="loading"><div class="logo">حارتنا</div><div>عم نعمّر الحارة…</div></div>
+</div>
+<div class="hint">اضغط <kbd>H</kbd> لتخفي الأزرار وقت التسجيل</div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>
