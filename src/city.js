@@ -236,7 +236,7 @@ export function buildCity(scene, materials, { seed = 7, owners = [], buildings =
       box('lantern', mat(cx, h - 0.95, cz, w + 0.08, 0.12, d + 0.08), owner.color);
       top = h + 5.5;
     }
-    plots.push({ id, type: owner ? 'building' : 'house', x: cx, z: cz, top, owner: owner ? owner.username : null });
+    plots.push({ id, type: owner ? 'building' : 'house', x: cx, z: cz, w, d, h, top, owner: owner ? owner.username : null });
     rng = mainRng;
   }
 

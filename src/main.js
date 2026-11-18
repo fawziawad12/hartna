@@ -10,10 +10,22 @@ import { Residents } from './residents.js';
 import { createSky } from './sky.js';
 import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
-import { LADDER, CURRENCY, currentTier, nextTier, normalizeResidents } from './economy.js';
+import { CURRENCY, SHOP, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
+
+// Admin mode (reels frame, clean recording, manual day/night) is hidden from visitors.
+// Open the site once with ?admin=hartna-admin to switch it on in this browser, ?admin=off to switch it off.
+const ADMIN_KEY = 'hartna-admin';
+const store = {
+  get: (k) => { try { return localStorage.getItem(k); } catch { return null; } },
+  set: (k, v) => { try { v == null ? localStorage.removeItem(k) : localStorage.setItem(k, v); } catch {} },
+};
+if (params.get('admin') === ADMIN_KEY) store.set('hartna_admin', '1');
+if (params.get('admin') === 'off') store.set('hartna_admin', null);
+const isAdmin = store.get('hartna_admin') === '1';
+document.body.classList.toggle('admin', isAdmin);
 
 // ---- Renderer / scene --------------------------------------------------------
 const stage = $('stage');
@@ -91,6 +103,7 @@ function setMode(m) {
   if (m === 'follow' && !followed) followed = residents.list[Math.floor(Math.random() * residents.list.length)];
   document.querySelectorAll('[data-mode]').forEach((b) => b.classList.toggle('active', b.dataset.mode === m));
   if (m === 'follow' && followed) {
+    showHome(null);
     showCard(followed);
     // jump straight to them if we are far away
     if (camera.position.distanceTo(followed.pos) > 40) {
@@ -102,8 +115,21 @@ function setMode(m) {
 }
 
 // ---- Day / night -----------------------------------------------------------------------
-let night = params.get('time') === 'night' ? 1 : 0;
+// Day and night follow the real time in Jordan. Only the admin can override it.
+function ammanNight() {
+  const parts = new Intl.DateTimeFormat('en-GB', { timeZone: 'Asia/Amman', hour: 'numeric', minute: 'numeric', hourCycle: 'h23' }).formatToParts(new Date());
+  const h = Number(parts.find((p) => p.type === 'hour').value) + Number(parts.find((p) => p.type === 'minute').value) / 60;
+  if (h >= 7 && h < 17) return 0; // day
+  if (h >= 17 && h < 19) return (h - 17) / 2; // sunset
+  if (h >= 5 && h < 7) return 1 - (h - 5) / 2; // sunrise
+  return 1; // night
+}
+let manualTime = isAdmin && params.get('time') ? (params.get('time') === 'night' ? 1 : 0) : null;
+let night = manualTime ?? ammanNight();
 let nightTarget = night;
+setInterval(() => {
+  if (manualTime === null) nightTarget = ammanNight();
+}, 60000);
 const C = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t);
 function applyTime(t) {
   const sunDir = new THREE.Vector3(0.62, THREE.MathUtils.lerp(0.32, 0.55, t), 0.42).normalize();
@@ -130,7 +156,7 @@ function applyTime(t) {
 }
 
 // ---- Sizing (normal + 9:16 reels frame) ------------------------------------------------
-let reels = params.has('reels');
+let reels = isAdmin && params.has('reels');
 function resize() {
   let w = innerWidth;
   let h = innerHeight;
@@ -182,21 +208,66 @@ function updateStats(data) {
 // ---- Resident card -------------------------------------------------------------------------
 function showCard(w) {
   const d = w.data;
-  const tier = currentTier(d);
-  const next = nextTier(d);
   $('card-name').textContent = d.displayName || d.username;
   $('card-user').textContent = '@' + d.username;
   $('card-joined').textContent = `ساكن رقم ${d.number}` + (d.joinedAt ? ` · من ${d.joinedAt}` : '');
-  $('card-money').textContent = `${CURRENCY.emoji} ${(d.money || 0).toLocaleString('en-US')} ${CURRENCY.ar}`;
-  const free = d.assets.some((a) => a.type === 'building' && a.free);
-  $('card-has').textContent = tier.key === 'phone' ? '📱 عنده موبايل بس، لسا ما عنده بيت' : free ? `📱 موبايل + 🏢 عمارة هدية (من أول 100)` : `${tier.emoji} عنده ${tier.ar}`;
+  cardResident = d;
+  updateCardMoney();
+  const owns = [];
+  if (d.assets.some((a) => a.type === 'home')) owns.push('🏠 بيت هدية');
+  for (const a of d.assets) {
+    const item = SHOP.find((i) => i.key === a.type);
+    if (item) owns.push(`${item.emoji} ${item.ar}`);
+  }
+  $('card-has').textContent = '📱 موبايل' + (owns.length ? ' · ' + owns.join(' · ') : '');
   $('card-home').style.display = w.home ? '' : 'none';
-  $('card-next').textContent = next ? `الخطوة الجاية: ${next.emoji} ${next.ar} (${next.price.toLocaleString('en-US')} ${CURRENCY.emoji})` : 'وصل للقمة 🏆';
-  $('ladder').innerHTML = LADDER.map((t) => `<span class="${t.key === tier.key ? 'on' : ''}" title="${t.ar}">${t.emoji}</span>`).join('<i>›</i>');
+  const next = SHOP.find((i) => !d.assets.some((a) => a.type === i.key));
+  $('card-next').textContent = next ? `بيقدر يشتري: ${next.emoji} ${next.ar} بـ ${fmt(next.price)} ${CURRENCY.emoji}` : '';
   $('card').classList.add('show');
 }
+let cardResident = null;
+function updateCardMoney() {
+  if (!cardResident) return;
+  $('card-money').textContent = `${CURRENCY.emoji} ${fmt(moneyNow(cardResident))} ${CURRENCY.ar}`;
+  $('card-rate').textContent = `بيكسب ${fmt(incomePerHour(cardResident))} ${CURRENCY.emoji} كل ساعة`;
+}
+setInterval(updateCardMoney, 1000);
 function hideCard() {
   $('card').classList.remove('show');
+  cardResident = null;
+}
+
+// ---- Home highlight: a light beam + glowing shell over one house ---------------------------------
+const highlight = new THREE.Group();
+highlight.visible = false;
+const beamMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.2, 1.6, 0.6), transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false, side: THREE.DoubleSide });
+const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 1.4, 70, 24, 1, true).translate(0, 35, 0), beamMat);
+const shellMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.5), transparent: true, opacity: 0.4, blending: THREE.AdditiveBlending, depthWrite: false });
+const shell = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), shellMat);
+const ringMat = new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 1.9, 0.7), transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false });
+const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.08, 8, 48).rotateX(Math.PI / 2), ringMat);
+const arrow = new THREE.Mesh(new THREE.ConeGeometry(0.9, 1.8, 4).rotateX(Math.PI), new THREE.MeshBasicMaterial({ color: new THREE.Color(2.6, 1.9, 0.7) }));
+highlight.add(beam, shell, ring, arrow);
+scene.add(highlight);
+let highlightPlot = null;
+function showHome(plot) {
+  highlightPlot = plot;
+  highlight.visible = !!plot;
+  if (!plot) return;
+  highlight.position.set(plot.x, 0, plot.z);
+  shell.scale.set(plot.w + 0.4, plot.h + 1.2, plot.d + 0.4);
+  shell.position.y = (plot.h + 1.2) / 2;
+}
+function updateHighlight(time) {
+  if (!highlightPlot) return;
+  const p = 0.5 + 0.5 * Math.sin(time * 4);
+  shellMat.opacity = 0.15 + 0.3 * p;
+  beamMat.opacity = 0.1 + 0.12 * p;
+  const r = Math.max(highlightPlot.w, highlightPlot.d) * 0.8 + p * 1.5;
+  ring.scale.set(r, 1, r);
+  ring.position.y = 0.3;
+  arrow.position.y = highlightPlot.top + 3 + p * 1.2;
+  arrow.rotation.y = time;
 }
 
 // ---- Interaction ----------------------------------------------------------------------------------
@@ -220,25 +291,37 @@ document.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('clic
   setMode(b.dataset.mode);
   if (b.dataset.mode === 'orbit') controls.autoRotate = true;
 }));
-const toggleNight = () => (nightTarget = nightTarget > 0.5 ? 0 : 1);
+const toggleNight = () => {
+  if (!isAdmin) return;
+  manualTime = nightTarget > 0.5 ? 0 : 1;
+  nightTarget = manualTime;
+};
 const toggleReels = () => {
+  if (!isAdmin) return;
   reels = !reels;
   resize();
 };
-const toggleUI = () => document.body.classList.toggle('clean');
+const toggleUI = () => isAdmin && document.body.classList.toggle('clean');
 $('btn-night').onclick = toggleNight;
 $('btn-reels').onclick = toggleReels;
 $('btn-clean').onclick = toggleUI;
+$('exit-clean').onclick = () => document.body.classList.remove('clean');
 $('btn-names').onclick = () => (residents.labelsVisible = !residents.labelsVisible);
-$('card-close').onclick = () => setMode('orbit');
+$('card-close').onclick = () => {
+  setMode('orbit');
+  showHome(null);
+};
 $('card-home').onclick = () => {
   if (!followed || !followed.home) return;
   const h = followed.home;
+  const who = followed;
   setMode('orbit');
+  showHome(h);
+  showCard(who);
   controls.autoRotate = true;
   lookNow.set(h.x, h.top - 3, h.z);
   controls.target.copy(lookNow);
-  camera.position.set(h.x + 22, h.top + 16, h.z + 22);
+  camera.position.set(h.x + 16, h.top + 12, h.z + 16);
 };
 $('search').addEventListener('change', (e) => {
   const w = residents.find(e.target.value);
@@ -253,6 +336,10 @@ $('search').addEventListener('change', (e) => {
 addEventListener('keydown', (e) => {
   if (e.target.tagName === 'INPUT') return;
   const k = e.key.toLowerCase();
+  if (e.key === 'Escape') {
+    document.body.classList.remove('clean');
+    $('shop').classList.remove('show');
+  }
   if (k === 'h') toggleUI();
   if (k === 'n') toggleNight();
   if (k === 'r') toggleReels();
@@ -261,6 +348,14 @@ addEventListener('keydown', (e) => {
   if (k === 'f') setMode('follow');
   if (k === 'l') residents.labelsVisible = !residents.labelsVisible;
 });
+
+// ---- Shop -----------------------------------------------------------------------------------------
+$('shop-items').innerHTML = SHOP.map(
+  (i) => `<div class="item"><div class="ic">${i.emoji}</div><div class="tx"><b>${i.ar}</b><span>${i.desc}</span>${i.incomePerHour ? `<em>+${fmt(i.incomePerHour)} ${CURRENCY.emoji} بالساعة</em>` : ''}</div><div class="pr">${fmt(i.price)} ${CURRENCY.emoji}</div></div>`,
+).join('');
+$('shop-earn').innerHTML = EARN_RULES.map((r) => `<div class="rule"><span>${r.emoji} ${r.ar}</span><b>+${fmt(r.amount)} ${CURRENCY.emoji}</b>${r.live ? '' : '<i>قريباً</i>'}</div>`).join('');
+$('btn-shop').onclick = () => $('shop').classList.toggle('show');
+$('shop-close').onclick = () => $('shop').classList.remove('show');
 
 // ---- Loop -----------------------------------------------------------------------------------------
 const clock = new THREE.Clock();
@@ -277,6 +372,7 @@ function frame() {
     l.scale.set(l.userData.baseScale.x * k, l.userData.baseScale.y * k, 1);
   }
   minaret.update(dt);
+  updateHighlight(clock.elapsedTime);
   if (mode === 'orbit') {
     controls.update();
     lookNow.copy(controls.target);
@@ -303,7 +399,7 @@ function frame() {
   const followers = Number(params.get('followers')) || data.followers || data.city?.followers || list.length;
   data.city = { followers };
   const owners = list
-    .filter((r) => r.assets.some((a) => a.type === 'building'))
+    .filter((r) => r.assets.some((a) => a.type === 'home'))
     .map((r) => ({ username: r.username, color: '#' + new THREE.Color().setHSL(((r.number * 0.618) % 1), 0.65, 0.5).getHexString() }));
   city = buildCity(scene, materials, { owners, buildings: 100 });
   // A few real lights around the square for the night.

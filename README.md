@@ -12,6 +12,16 @@ npm run dev      # http://localhost:5173
 npm run build    # static site in dist/ (deploy to Vercel / Netlify as-is)
 ```
 
+## Admin mode
+
+Visitors only see orbit, tour, follow, shop and names. Open the site once with `?admin=hartna-admin` to unlock the admin buttons in that browser (reels 9:16, clean recording, manual day/night); `?admin=off` locks them again. Esc leaves recording mode. This only hides buttons; it is not a security feature.
+
+Day and night follow the real time in Jordan (Asia/Amman).
+
+## Money and shop
+
+Money is virtual and computed from each resident's `joinedAt`: everyone earns 6 🪙 per hour, plus the hourly income of anything they own (`src/economy.js`, `SHOP`). Buying is not open yet: it needs player accounts and a small backend.
+
 ## Controls
 
 | Key | Button | |

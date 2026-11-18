@@ -15,11 +15,11 @@
   <div id="hud">
     <header class="brand">
       <div class="logo">حارتنا</div>
-      <div class="sub">أول 100 ساكن إلهم عمارة هدية 🎁</div>
+      <div class="sub">أول 100 ساكن إلهم بيت هدية 🎁</div>
       <div class="stats">
         <div><b id="followers">0</b><span>متابع ❤️</span></div>
         <div><b id="residents">0</b><span>ساكن 🚶</span></div>
-        <div><b id="free">0</b><span>عمارة هدية باقية 🎁</span></div>
+        <div><b id="free">0</b><span>بيت هدية باقي 🎁</span></div>
       </div>
     </header>
     <div class="find">
@@ -30,10 +30,11 @@
       <button data-mode="orbit" class="active" title="O">🌀<span>دوران</span></button>
       <button data-mode="cinema" title="C">🎬<span>جولة</span></button>
       <button data-mode="follow" title="F">🚶<span>لحّق ساكن</span></button>
-      <button id="btn-night" title="N">🌙<span>ليل/نهار</span></button>
+      <button id="btn-shop">🛍️<span>المتجر</span></button>
       <button id="btn-names" title="L">🏷️<span>الأسماء</span></button>
-      <button id="btn-reels" title="R">📱<span>ريلز 9:16</span></button>
-      <button id="btn-clean" title="H">👁️<span>تسجيل</span></button>
+      <button id="btn-night" class="admin-only" title="N">🌙<span>ليل/نهار</span></button>
+      <button id="btn-reels" class="admin-only" title="R">📱<span>ريلز 9:16</span></button>
+      <button id="btn-clean" class="admin-only" title="H">👁️<span>تسجيل</span></button>
     </nav>
     <aside id="card">
       <button id="card-close" aria-label="سكّر">✕</button>
@@ -41,14 +42,25 @@
       <div id="card-joined" class="muted"></div>
       <div id="card-has"></div>
       <div id="card-money" class="money"></div>
-      <div id="ladder" class="ladder"></div>
+      <div id="card-rate" class="muted"></div>
       <div id="card-next" class="muted"></div>
-      <button id="card-home" class="home-btn">🏢 وريني عمارته</button>
+      <button id="card-home" class="home-btn">🏠 وين بيته؟</button>
     </aside>
+    <section id="shop">
+      <button id="shop-close" aria-label="سكّر">✕</button>
+      <h2>🛍️ متجر حارتنا</h2>
+      <p class="muted">المصاري افتراضية بس، وبتجمعها وإنت ساكن بالحارة.</p>
+      <h3>كيف بتجمع مصاري؟</h3>
+      <div id="shop-earn"></div>
+      <h3>شو بتقدر تشتري؟</h3>
+      <div id="shop-items"></div>
+      <p class="soon">الشراء رح يفتح قريباً 🔒</p>
+    </section>
   </div>
+  <button id="exit-clean" title="Esc">✕ خروج من التسجيل</button>
   <div id="loading"><div class="logo">حارتنا</div><div>عم نعمّر الحارة…</div></div>
 </div>
-<div class="hint">اضغط <kbd>H</kbd> لتخفي الأزرار وقت التسجيل</div>
+<div class="hint admin-only">أدمن · <kbd>H</kbd> تسجيل · <kbd>Esc</kbd> خروج</div>
 <script type="module" src="./src/main.js"></script>
 </body>
 </html>

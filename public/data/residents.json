@@ -2,10 +2,31 @@
   "instagram": "whatif_dream",
   "followers": 5,
   "residents": [
-    { "username": "mo_awad0", "name": "مُحَمَّد عَواد" },
-    { "username": "fawzi_1_1", "name": "Fawzi" },
-    { "username": "mr.kalapres", "name": "Mohannad Majdi" },
-    { "username": "fawzi_fmd", "name": "Fawzi" },
-    { "username": "futuretechjo", "name": "فريق التطوع FutureTech" }
-  ]
+    {
+      "username": "mo_awad0",
+      "name": "مُحَمَّد عَواد",
+      "joinedAt": "2026-11-18"
+    },
+    {
+      "username": "fawzi_1_1",
+      "name": "Fawzi",
+      "joinedAt": "2026-11-18"
+    },
+    {
+      "username": "mr.kalapres",
+      "name": "Mohannad Majdi",
+      "joinedAt": "2026-11-18"
+    },
+    {
+      "username": "fawzi_fmd",
+      "name": "Fawzi",
+      "joinedAt": "2026-11-18"
+    },
+    {
+      "username": "futuretechjo",
+      "name": "فريق التطوع FutureTech",
+      "joinedAt": "2026-11-18"
+    }
+  ],
+  "startedAt": "2026-11-18"
 }
