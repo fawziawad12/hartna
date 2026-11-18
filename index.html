@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>حارتنا</title>
+<meta name="description" content="حارتنا: حارة عربية قديمة ثلاثية الأبعاد بتكبر مع المتابعين" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;700;900&family=Reem+Kufi:wght@700&display=swap" rel="stylesheet" />
+  <script type="module" crossorigin src="./assets/index-BELMBVyn.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-1N5JJPn4.css">
+</head>
+<body>
+<div id="stage">
+  <div id="hud">
+    <header class="brand">
+      <div class="logo">حارتنا</div>
+      <div class="sub">أول 100 ساكن إلهم بيت هدية 🎁</div>
+      <div class="stats">
+        <div><b id="followers">0</b><span>متابع ❤️</span></div>
+        <div><b id="residents">0</b><span>ساكن 🚶</span></div>
+        <div><b id="free">0</b><span>بيت هدية باقي 🎁</span></div>
+      </div>
+    </header>
+    <div class="find">
+      <input id="search" list="names" placeholder="🔍 دوّر على اسمك…" autocomplete="off" />
+      <datalist id="names"></datalist>
+    </div>
+    <nav class="bar">
+      <button data-mode="orbit" class="active" title="O">🌀<span>دوران</span></button>
+      <button data-mode="cinema" title="C">🎬<span>جولة</span></button>
+      <button data-mode="follow" title="F">🚶<span>لحّق ساكن</span></button>
+      <button id="btn-acct">👤<span>حسابي</span></button>
+      <button id="btn-shop">🛍️<span>المتجر</span></button>
+      <button id="btn-names" title="L">🏷️<span>الأسماء</span></button>
+      <button id="btn-sound">🔇<span>صوت</span></button>
+      <button id="btn-night" class="admin-only" title="N">🌙<span>ليل/نهار</span></button>
+      <button id="btn-reels" class="admin-only" title="R">📱<span>ريلز 9:16</span></button>
+      <button id="btn-clean" class="admin-only" title="H">👁️<span>تسجيل</span></button>
+    </nav>
+    <aside id="card">
+      <button id="card-close" aria-label="سكّر">✕</button>
+      <div class="who"><b id="card-name"></b><span id="card-user"></span></div>
+      <div id="card-joined" class="muted"></div>
+      <div id="card-has"></div>
+      <div id="card-money" class="money"></div>
+      <div id="card-rate" class="muted"></div>
+      <div id="card-next" class="muted"></div>
+      <button id="card-home" class="home-btn">🏠 وين بيته؟</button>
+    </aside>
+    <section id="shop">
+      <button id="shop-close" aria-label="سكّر">✕</button>
+      <h2>🛍️ متجر حارتنا</h2>
+      <p class="muted">المصاري افتراضية بس، وبتجمعها وإنت ساكن بالحارة.</p>
+      <h3>كيف بتجمع مصاري؟</h3>
+      <div id="shop-earn"></div>
+      <h3>شو بتقدر تشتري؟</h3>
+      <div id="shop-items"></div>
+      <h3>🏘️ سوق البيوت</h3>
+      <div id="shop-market"></div>
+      <h3>👕 متجر الأواعي</h3>
+      <div id="shop-clothes"></div>
+      <button class="gold" id="shop-login" hidden>👤 سجّل دخول لتشتري</button>
+    </section>
+    <section id="acct" class="panel">
+      <button id="acct-close" aria-label="سكّر">✕</button>
+      <h2>👤 حسابي</h2>
+      <div id="acct-body"></div>
+      <div id="admin-tools" hidden></div>
+    </section>
+    <div id="toast"></div>
+  </div>
+  <button id="exit-clean" title="Esc">✕ خروج من التسجيل</button>
+  <div id="loading"><div class="logo">حارتنا</div><div>عم نعمّر الحارة…</div></div>
+</div>
+<div class="hint admin-only">أدمن · <kbd>H</kbd> تسجيل · <kbd>Esc</kbd> خروج</div>
+</body>
+</html>
