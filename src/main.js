@@ -159,11 +159,8 @@ function placeOwnerLabels() {
   ownerLabels.length = 0;
   for (const plot of city.plots) {
     if (!plot.owner) continue;
+    // no tag over houses: the name is shown on the person walking around; the house keeps its flag
     const w = residents.list.find((r) => r.data.username === plot.owner);
-    const l = makeLabel(`🏢 عمارة @${plot.owner}`, { height: 0.9, size: 48, bg: 'rgba(60,30,10,0.72)' });
-    l.position.set(plot.x, plot.top + 1, plot.z);
-    scene.add(l);
-    ownerLabels.push(l);
     if (w) w.home = plot;
   }
 }

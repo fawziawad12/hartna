@@ -120,7 +120,7 @@ export class Residents {
     const rng = mulberry32(hashString(data.id + data.username));
     const body = buildPerson(rng);
     const tier = currentTier(data);
-    const label = makeLabel(`${tier.emoji} @${data.username}`);
+    const label = makeLabel(`@${data.username}`);
     label.position.y = 2.45;
     body.group.add(label);
     // Start on a random street segment
