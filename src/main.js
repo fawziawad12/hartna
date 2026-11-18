@@ -226,6 +226,7 @@ function showCard(w) {
   }
   $('card-has').textContent = '📱 موبايل' + (owns.length ? ' · ' + owns.join(' · ') : '');
   $('card-home').style.display = w.home ? '' : 'none';
+  $('card-home').textContent = highlightPlot && w.home && highlightPlot.lot === w.home.lot ? '💡 طفّي الضو' : '🏠 وين بيته؟';
   const next = SHOP.find((i) => !d.assets.some((a) => a.type === i.key));
   $('card-next').textContent = next ? `بيقدر يشتري: ${next.emoji} ${next.ar} بـ ${fmt(next.price)} ${CURRENCY.emoji}` : '';
   $('card').classList.add('show');
@@ -322,10 +323,17 @@ $('card-close').onclick = () => {
 $('card-home').onclick = () => {
   if (!followed || !followed.home) return;
   const h = followed.home;
+  // second tap turns the light off
+  if (highlightPlot && highlightPlot.lot === h.lot) {
+    showHome(null);
+    $('card-home').textContent = '🏠 وين بيته؟';
+    return;
+  }
   const who = followed;
   setMode('orbit');
   showHome(h);
   showCard(who);
+  $('card-home').textContent = '💡 طفّي الضو';
   controls.autoRotate = true;
   lookNow.set(h.x, h.top - 3, h.z);
   controls.target.copy(lookNow);
@@ -727,7 +735,7 @@ if (isAdmin && online) {
     <input id="ad-pw" type="password" placeholder="كلمة سر الأدمن" />
     <input id="ad-user" placeholder="@username" dir="ltr" />
     <input id="ad-name" placeholder="الاسم (اختياري)" />
-    <div class="chips"><button class="ghost" id="ad-add">ضيف ساكن</button><button class="ghost" id="ad-verify">وافق على دخوله</button><button class="ghost" id="ad-give">أعطيه مصاري</button></div>`;
+    <div class="chips"><button class="ghost" id="ad-add">ضيف ساكن</button><button class="ghost" id="ad-verify">وافق على دخوله</button><button class="ghost" id="ad-give">أعطيه مصاري</button><button class="ghost" id="ad-take">اخصم مصاري (غرامة/ضريبة)</button></div>`;
   $('ad-pw').value = sessionStorage.getItem('hartna_admin_pw') || '';
   const pw = () => {
     sessionStorage.setItem('hartna_admin_pw', $('ad-pw').value);
@@ -747,6 +755,10 @@ if (isAdmin && online) {
   $('ad-give').onclick = () => {
     const n = Number(prompt('قديش؟', '1000'));
     if (n) run('admin_give', { p_amount: n }, 'انبعتت المصاري ✅');
+  };
+  $('ad-take').onclick = () => {
+    const n = Math.abs(Number(prompt('قديش بدك تخصم؟', '100')));
+    if (n) run('admin_give', { p_amount: -n }, `انخصم ${fmt(n)} ${CURRENCY.emoji}`);
   };
 }
 
