@@ -111,3 +111,6 @@ body.reels #card { right: 50%; transform: translateX(50%); bottom: 140px; }
 #toast { position: absolute; top: 18px; left: 50%; transform: translate(-50%, -20px); background: rgba(30,17,8,.9); border: 1px solid var(--line); color: var(--ink); padding: 8px 16px; border-radius: 999px; font-size: 14px; opacity: 0; pointer-events: none; transition: .3s; z-index: 9; }
 #toast.show { opacity: 1; transform: translate(-50%, 0); }
 #toast.bad { border-color: #ff7b7b; }
+.ig { display: inline-block; margin-top: 8px; font-size: 13px; font-weight: 700; color: #2a1606; background: linear-gradient(90deg, #ffc56e, #ff9a5a); border-radius: 999px; padding: 4px 12px; text-decoration: none; direction: rtl; }
+.ig:hover { filter: brightness(1.08); }
+body.reels .ig { display: none; }

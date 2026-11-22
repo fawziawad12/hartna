@@ -12,6 +12,7 @@ import { Cinematic } from './cinematic.js';
 import { makeLabel } from './labels.js';
 import { CityAudio } from './audio.js';
 import { online, rpc } from './api.js';
+import { INSTAGRAM } from './config.js';
 import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
@@ -661,7 +662,7 @@ async function pollLogin() {
         token = r.token;
         store.set('hartna_token', token);
         pendingLogin = null;
-        toast('أهلاً فيك بحارتنا 🎉');
+        toast('أهلاً فيك بمدينتنا 🎉');
         await loadMe();
         refreshCity();
         return;
@@ -676,7 +677,7 @@ async function pollLogin() {
   }
 }
 
-const cityInstagram = () => store.get('hartna_ig') || 'whatif_dream';
+const cityInstagram = () => INSTAGRAM;
 
 // shop buttons (buy / wear) appear when logged in
 function renderShopButtons() {

@@ -80,7 +80,7 @@ export const BASE_INCOME_PER_HOUR = 6; // the phone
 export const HOME_RENT_PER_HOUR = 4;
 
 export const EARN_RULES = [
-  { emoji: '📱', ar: 'كل ساعة إنت ساكن بالحارة', amount: BASE_INCOME_PER_HOUR, live: true, perHour: true },
+  { emoji: '📱', ar: 'كل ساعة إنت ساكن بالمدينة', amount: BASE_INCOME_PER_HOUR, live: true, perHour: true },
   { emoji: '🏠', ar: 'أجار بيتك (بيتأجّر لحاله)', amount: HOME_RENT_PER_HOUR, live: true, perHour: true },
   { emoji: '💬', ar: 'كل تعليق على بوست', amount: 50, live: false },
   { emoji: '📣', ar: 'تعمل منشن للحساب بالستوري', amount: 200, live: false },
@@ -110,9 +110,9 @@ export const SHOP = [
   { key: 'shop', emoji: '🏪', ar: 'دكان', desc: 'دخل أكبر من البسطة', price: 3000, incomePerHour: 15 },
   { key: 'floor', emoji: '🧱', ar: 'كبّر بيتك (طابق زيادة)', desc: 'بيتك بيعلى طابق', price: 8000, incomePerHour: 0 },
   { key: 'house', emoji: '🏠', ar: 'بيت تاني', desc: 'بيت جديد باسمك، وبيتأجّر لحاله', price: 12000, incomePerHour: 4 },
-  { key: 'car', emoji: '🚗', ar: 'سيارة', desc: 'سيارة بتمشي بشوارع الحارة', price: 30000, incomePerHour: 0 },
+  { key: 'car', emoji: '🚗', ar: 'سيارة', desc: 'سيارة بتمشي بشوارع المدينة', price: 30000, incomePerHour: 0 },
   { key: 'building', emoji: '🏢', ar: 'عمارة', desc: 'عمارة كاملة بشقق للأجار', price: 150000, incomePerHour: 120 },
-  { key: 'tower', emoji: '🏙️', ar: 'برج', desc: 'أعلى شي بالحارة', price: 1000000, incomePerHour: 600 },
+  { key: 'tower', emoji: '🏙️', ar: 'برج', desc: 'أعلى شي بالمدينة', price: 1000000, incomePerHour: 600 },
 ];
 
 
@@ -128,7 +128,7 @@ export const fmt = (n) => Math.floor(n).toLocaleString('en-US');
 // ---- Clothes ---------------------------------------------------------------
 // Everyone wears the same Hartna outfit by default; other outfits are sold in the clothes shop.
 export const OUTFITS = [
-  { key: 'hartna', ar: 'لبس حارتنا', emoji: '🟢', price: 0, cloth: '#2f6b5a', pants: '#2a2a2a', robe: false, head: 'hair', headColor: '#1c120c' },
+  { key: 'hartna', ar: 'لبس مدينتنا', emoji: '🟢', price: 0, cloth: '#2f6b5a', pants: '#2a2a2a', robe: false, head: 'hair', headColor: '#1c120c' },
   { key: 'thobe', ar: 'ثوب وشماغ', emoji: '🤍', price: 800, cloth: '#f4f1ea', pants: '#f4f1ea', robe: true, head: 'keffiyehRed', headColor: '#b8322c' },
   { key: 'abaya', ar: 'عباية وحجاب', emoji: '🖤', price: 800, cloth: '#1f1f2a', pants: '#1f1f2a', robe: true, head: 'hijab', headColor: '#3b2b4a' },
   { key: 'jalabiya', ar: 'جلابية مطرّزة', emoji: '🧡', price: 1200, cloth: '#b5523b', pants: '#b5523b', robe: true, head: 'cap', headColor: '#f4f1ea' },

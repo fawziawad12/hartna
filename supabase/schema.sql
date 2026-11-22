@@ -1,5 +1,5 @@
 -- =====================================================================
---  حارتنا · Hartna backend (Supabase / Postgres)
+--  مدينتنا · Madinatna backend (Supabase / Postgres)
 --  Paste this whole file into Supabase → SQL Editor → Run. Safe to run again.
 --  Everything the website does goes through the rpc functions below;
 --  visitors (anon key) can't touch the tables directly.
@@ -430,4 +430,4 @@ select hartna_add_resident('fawzi_1_1', 'Fawzi', '2026-11-18 00:00+03');
 select hartna_add_resident('mr.kalapres', 'Mohannad Majdi', '2026-11-18 00:00+03');
 select hartna_add_resident('fawzi_fmd', 'Fawzi', '2026-11-18 00:00+03');
 select hartna_add_resident('futuretechjo', 'فريق التطوع FutureTech', '2026-11-18 00:00+03');
-insert into settings values ('instagram', 'whatif_dream') on conflict (key) do nothing;
+insert into settings values ('instagram', '_madinatna') on conflict (key) do update set value = excluded.value;
