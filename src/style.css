@@ -77,6 +77,8 @@ body.reels #card { right: 50%; transform: translateX(50%); bottom: 140px; }
 .rule { display: flex; align-items: center; gap: 8px; font-size: 13.5px; padding: 6px 0; border-bottom: 1px solid rgba(255,200,120,.12); }
 .rule span { flex: 1; }
 .rule b { color: var(--gold); white-space: nowrap; }
+.rule.spend b { color: #ff9b8a; }
+.rule small { opacity: .7; font-size: 11.5px; }
 .rule i { font-style: normal; font-size: 11px; opacity: .7; border: 1px solid var(--line); border-radius: 999px; padding: 0 6px; }
 .item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid rgba(255,200,120,.12); }
 .item .ic { font-size: 26px; width: 34px; text-align: center; }

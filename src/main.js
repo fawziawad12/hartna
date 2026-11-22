@@ -13,7 +13,7 @@ import { makeLabel } from './labels.js';
 import { CityAudio } from './audio.js';
 import { online, rpc } from './api.js';
 import { INSTAGRAM } from './config.js';
-import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
+import { CURRENCY, SHOP, OUTFITS, MARKET_RULES, EARN_RULES, EXPENSE_RULES, FOOD_PER_DAY, fmt, moneyNow, incomePerHour, normalizeResidents } from './economy.js';
 
 const params = new URLSearchParams(location.search);
 const $ = (id) => document.getElementById(id);
@@ -239,7 +239,7 @@ const refreshCard = () => {
 function updateCardMoney() {
   if (!cardResident) return;
   $('card-money').textContent = `${CURRENCY.emoji} ${fmt(moneyNow(cardResident))} ${CURRENCY.ar}`;
-  $('card-rate').textContent = `بيكسب ${fmt(incomePerHour(cardResident))} ${CURRENCY.emoji} كل ساعة`;
+  $('card-rate').textContent = `بيكسب ${fmt(incomePerHour(cardResident))} ${CURRENCY.emoji} كل ساعة (بعد الأكل)`;
 }
 setInterval(updateCardMoney, 1000);
 function hideCard() {
@@ -372,6 +372,7 @@ $('shop-items').innerHTML = SHOP.map(
   (i) => `<div class="item"><div class="ic">${i.emoji}</div><div class="tx"><b>${i.ar}</b><span>${i.desc}</span>${i.incomePerHour ? `<em>+${fmt(i.incomePerHour)} ${CURRENCY.emoji} بالساعة</em>` : ''}</div><div class="pr">${fmt(i.price)} ${CURRENCY.emoji}</div><button class="gold sm" data-buy="${i.key}" hidden>اشتري</button></div>`,
 ).join('');
 $('shop-earn').innerHTML = EARN_RULES.map((r) => `<div class="rule"><span>${r.emoji} ${r.ar}</span><b>+${fmt(r.amount)} ${CURRENCY.emoji}${r.perHour ? ' بالساعة' : ''}</b>${r.live ? '' : '<i>قريباً</i>'}</div>`).join('');
+$('shop-spend').innerHTML = EXPENSE_RULES.map((r) => `<div class="rule spend"><span>${r.emoji} ${r.ar}<small> (${r.note})</small></span><b>−${fmt(r.amount)} ${CURRENCY.emoji} باليوم</b></div>`).join('');
 $('shop-clothes').innerHTML = OUTFITS.map(
   (o) => `<div class="item"><div class="ic swatch" style="background:${o.cloth}"></div><div class="tx"><b>${o.ar}</b>${o.price ? '' : '<span>اللبس الموحّد لكل الساكنين</span>'}</div><div class="pr">${o.price ? fmt(o.price) + ' ' + CURRENCY.emoji : 'مجاني'}</div><button class="gold sm" data-buy-outfit="${o.key}" hidden>اشتري</button></div>`,
 ).join('');
@@ -595,7 +596,7 @@ function renderAccount() {
   el.innerHTML = `
     <div class="me-head"><b>@${esc(me.username)}</b><span>ساكن رقم ${me.number}</span></div>
     <div class="money big" id="me-money"></div>
-    <div class="muted">بتكسب ${fmt(me.income)} ${CURRENCY.emoji} كل ساعة</div>
+    <div class="muted">بتكسب ${fmt(me.income)} ${CURRENCY.emoji} كل ساعة، بعد ما ينخصم أكلك (${fmt(FOOD_PER_DAY)} ${CURRENCY.emoji} باليوم)</div>
     <h3>معلوماتي</h3>
     <label>الاسم <input id="me-name" value="${esc(me.name || '')}" maxlength="40" /></label>
     <label>العمر <input id="me-age" type="number" min="5" max="120" value="${esc(me.age || '')}" /></label>

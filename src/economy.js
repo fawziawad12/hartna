@@ -76,21 +76,30 @@ export function ownedPlots(residents) {
 // Everyone earns just by living in the city. Money is computed from the join time,
 // so it keeps growing even when nobody has the page open.
 export const BASE_INCOME_PER_HOUR = 6; // the phone
-// Houses rent themselves out automatically: every house you own pays rent every hour.
-export const HOME_RENT_PER_HOUR = 4;
+// The home you live in does NOT earn rent. Only extra houses you buy rent themselves out.
+export const HOME_RENT_PER_HOUR = 0;
+export const EXTRA_HOUSE_RENT_PER_HOUR = 4;
+// Daily living costs: everyone eats, so food is taken out of your money a little every hour.
+export const FOOD_PER_HOUR = 2;
+export const FOOD_PER_DAY = FOOD_PER_HOUR * 24;
+export const EXPENSE_RULES = [
+  { emoji: '🍞', ar: 'أكل وشرب كل يوم', amount: FOOD_PER_DAY, note: 'بينخصم شوي شوي كل ساعة' },
+];
 
 export const EARN_RULES = [
   { emoji: '📱', ar: 'كل ساعة إنت ساكن بالمدينة', amount: BASE_INCOME_PER_HOUR, live: true, perHour: true },
-  { emoji: '🏠', ar: 'أجار بيتك (بيتأجّر لحاله)', amount: HOME_RENT_PER_HOUR, live: true, perHour: true },
+  { emoji: '🏘️', ar: 'أجار كل بيت زيادة بتشتريه', amount: EXTRA_HOUSE_RENT_PER_HOUR, live: true, perHour: true },
   { emoji: '💬', ar: 'كل تعليق على بوست', amount: 50, live: false },
   { emoji: '📣', ar: 'تعمل منشن للحساب بالستوري', amount: 200, live: false },
 ];
 
 export function incomePerHour(resident) {
   if (resident.income != null) return Number(resident.income);
-  let total = BASE_INCOME_PER_HOUR;
+  let total = BASE_INCOME_PER_HOUR - FOOD_PER_HOUR;
+  const houses = (resident.assets || []).filter((a) => a.type === 'home' || a.type === 'house').length;
+  total += Math.max(houses - 1, 0) * EXTRA_HOUSE_RENT_PER_HOUR; // the one you live in pays no rent
   for (const a of resident.assets || []) {
-    if (a.type === 'home') total += HOME_RENT_PER_HOUR;
+    if (a.type === 'house') continue;
     const item = SHOP.find((i) => i.key === a.type);
     if (item && item.incomePerHour) total += item.incomePerHour;
   }
@@ -109,7 +118,7 @@ export const SHOP = [
   { key: 'stall', emoji: '🛒', ar: 'بسطة بالسوق', desc: 'بتبيع عليها وبتجيبلك دخل', price: 500, incomePerHour: 4 },
   { key: 'shop', emoji: '🏪', ar: 'دكان', desc: 'دخل أكبر من البسطة', price: 3000, incomePerHour: 15 },
   { key: 'floor', emoji: '🧱', ar: 'كبّر بيتك (طابق زيادة)', desc: 'بيتك بيعلى طابق', price: 8000, incomePerHour: 0 },
-  { key: 'house', emoji: '🏠', ar: 'بيت تاني', desc: 'بيت جديد باسمك، وبيتأجّر لحاله', price: 12000, incomePerHour: 4 },
+  { key: 'house', emoji: '🏠', ar: 'بيت تاني', desc: 'بيت زيادة باسمك، بيتأجّر لحاله وبيجيبلك أجار', price: 12000, incomePerHour: 4 },
   { key: 'car', emoji: '🚗', ar: 'سيارة', desc: 'سيارة بتمشي بشوارع المدينة', price: 30000, incomePerHour: 0 },
   { key: 'building', emoji: '🏢', ar: 'عمارة', desc: 'عمارة كاملة بشقق للأجار', price: 150000, incomePerHour: 120 },
   { key: 'tower', emoji: '🏙️', ar: 'برج', desc: 'أعلى شي بالمدينة', price: 1000000, incomePerHour: 600 },
@@ -120,7 +129,7 @@ export const SHOP = [
 export const MARKET_RULES = [
   { emoji: '🏷️', ar: 'اعرض بيتك للبيع', desc: 'بتحط السعر اللي بدك ياه، وبيطلع بسوق البيوت' },
   { emoji: '🤝', ar: 'اشتري بيت صاحبك', desc: 'إذا عارض بيته، بتشتريه وبيصير باسمك' },
-  { emoji: '🔑', ar: 'البيت بيتأجّر لحاله', desc: `كل بيت إلك بيجيبلك ${HOME_RENT_PER_HOUR} 🪙 أجار كل ساعة` },
+  { emoji: '🔑', ar: 'البيوت الزيادة بتتأجّر', desc: `بيتك اللي ساكن فيه ما بيتأجّر. كل بيت زيادة بتشتريه بيجيبلك ${EXTRA_HOUSE_RENT_PER_HOUR} 🪙 أجار كل ساعة` },
 ];
 
 export const fmt = (n) => Math.floor(n).toLocaleString('en-US');
