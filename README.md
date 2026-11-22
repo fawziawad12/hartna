@@ -1,6 +1,6 @@
 # مدينتنا · Madinatna
 
-مدينة عربية قديمة ثلاثية الأبعاد بتكبر مع متابعين [@_madinatna](https://www.instagram.com/_madinatna/). كل واحد بيعلّق على إنستغرام بيصير ساكن بالمدينة: بيبلّش بموبايل بس، وبيمشي بالأزقة واسمه فوق راسه.
+مدينة عربية قديمة ثلاثية الأبعاد بتكبر مع متابعين [@madinatna_](https://www.instagram.com/madinatna_/). كل واحد بيعلّق على إنستغرام بيصير ساكن بالمدينة: بيبلّش بموبايل بس، وبيمشي بالأزقة واسمه فوق راسه.
 
 A 3D old Arabic neighbourhood (Three.js) that grows with an Instagram community. Phase 1: the map.
 

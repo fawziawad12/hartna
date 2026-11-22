@@ -433,4 +433,4 @@ select hartna_add_resident('fawzi_1_1', 'Fawzi', '2026-11-18 00:00+03');
 select hartna_add_resident('mr.kalapres', 'Mohannad Majdi', '2026-11-18 00:00+03');
 select hartna_add_resident('fawzi_fmd', 'Fawzi', '2026-11-18 00:00+03');
 select hartna_add_resident('futuretechjo', 'فريق التطوع FutureTech', '2026-11-18 00:00+03');
-insert into settings values ('instagram', '_madinatna') on conflict (key) do update set value = excluded.value;
+insert into settings values ('instagram', 'madinatna_') on conflict (key) do update set value = excluded.value;
